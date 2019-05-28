@@ -19,12 +19,12 @@ if(NOT WIN32)
   set(BoldCyan    "${Esc}[1;36m")
   set(BoldWhite   "${Esc}[1;37m")
 endif()
-
-project(Cengine)
-
-if("${PROJECT_SOURCE_DIR}" MATCHES "${PROJECT_BINARY_DIR}")
-   message(SEND_ERROR "${Red}In-source builds are not allowed.${ColourReset}")
+#message("${CMAKE_SOURCE_DIR}")
+#message("${CMAKE_CURRENT_BINARY_DIR}")
+if(CMAKE_CURRENT_BINARY_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+   message(FATAL_ERROR "${Red}In-source builds are not allowed.${ColourReset}")
 endif()
+project(Cengine)
 
 if(NOT CMAKE_BUILD_TYPE)
 	message("${Yellow}Build type not specified, assuming Release mode${ColourReset}")
