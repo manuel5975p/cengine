@@ -1,7 +1,9 @@
+#include <iostream>
 #include "types.hpp"
 #include "bitboard.hpp"
-#include <iostream>
+#include "position.hpp"
 #include "io.hpp"
 int main(){
-	print(0xff0ff0f);
+	Position p;
+	std::cout << p.to_string() << "\n";
 }

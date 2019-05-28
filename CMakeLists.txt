@@ -23,7 +23,11 @@ endif()
 if(CMAKE_CURRENT_BINARY_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
    message(FATAL_ERROR "${Red}In-source builds are not allowed.${ColourReset}")
 endif()
+
 project(Cengine)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CXX_STANDARD 17)
 
 if(NOT CMAKE_BUILD_TYPE)
 	message("${Yellow}Build type not specified, assuming Release mode${ColourReset}")
@@ -52,6 +56,6 @@ else()
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -pedantic")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wall -Wextra -pedantic -march=native -flto")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wall -Wextra -pedantic -march=native -flto -s -fomit-frame-pointer")
 
 add_executable(cengine ${cengine_src})
