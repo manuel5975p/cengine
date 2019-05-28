@@ -1,4 +1,9 @@
 cmake_minimum_required(VERSION 3.6)
+
+if("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
+   message(SEND_ERROR "In-source builds are not allowed.")
+endif("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS True)
 file(GLOB cengine_src "src/*.hpp" "src/*.cpp")
 
