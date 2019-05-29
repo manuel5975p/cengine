@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <cassert>
 #include <iostream>
-template<Piece p> inline char pieceChar   (){return '?';}
+template<Piece p> inline char pieceChar   (){return 'X';}
 template<> inline char pieceChar<W_PAWN>  (){return 'P';}
 template<> inline char pieceChar<W_ROOK>  (){return 'R';}
 template<> inline char pieceChar<W_KNIGHT>(){return 'N';}
@@ -33,7 +33,7 @@ inline constexpr char pieceChar(Piece p){
 	case B_BISHOP:return 'b';break;
 	case B_QUEEN :return 'q';break;
 	case B_KING  :return 'k';break;
-	default      :return '?';break;
+	default      :return 'X';break;
 	}
 }
 

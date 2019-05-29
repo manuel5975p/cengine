@@ -10,10 +10,25 @@ Bitboard& Position::get(Piece p){
 std::string Position::to_string()const{
 	std::string ret = bb_to_string(get(W_PAWN), W_PAWN);
 	for(int i = 1;i < 12;i++){
-		ret = ret | bb_to_string(piece_boards[i], piece_types[i]);
+		ret = ret | bb_to_string(piece_boards[i], pieces[i]);
 	}
 	return ret;
 }
-Bitboard Position::generateTrivial(){
+Bitboard Position::occupied()const{
+	Bitboard x(0);
+	for(Bitboard b : piece_boards){
+		x |= b;
+	}
+	return x;
+}
+Bitboard Position::generate_trivial(Color color) const{
+	Bitboard occupied = this->occupied();
 	
+	if(color == WHITE){
+
+	}
+	else if(color == BLACK){
+		
+	}
+	return 0;
 }

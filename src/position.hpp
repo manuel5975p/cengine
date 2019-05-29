@@ -33,7 +33,7 @@ constexpr static size_t compress_piece(Piece p){
 	}
 }
 struct Position{
-	Bitboard piece_boards[12];
+	std::array<Bitboard, 12> piece_boards = {};
 	Position(){
 		get(W_PAWN) = 0xff00;
 		get(W_ROOK) = (1ULL | 1ULL << 7);
@@ -60,6 +60,7 @@ struct Position{
 	const Bitboard& get(Piece p)const;
 	Bitboard& get(Piece p);
 	std::string to_string()const;
-	Bitboard generate_trivial();
+	Bitboard generate_trivial(Color c)const;
+	Bitboard occupied()const;
 };
 #endif //POSITION_HPP_INCLUDED

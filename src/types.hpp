@@ -202,8 +202,11 @@ enum Piece {
   B_PAWN = 9, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING,
   PIECE_NB = 16
 };
-constexpr static std::array<Piece, 12> piece_types = {W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
-  B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING};
+constexpr static std::array<Piece, 12> pieces = {W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
+B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING};
+
+constexpr static std::array<PieceType, 6> piece_types = {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
+
 extern Value PieceValue[PHASE_NB][PIECE_NB];
 
 enum Depth : int {

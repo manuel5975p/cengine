@@ -4,6 +4,7 @@
 #include "position.hpp"
 #include "io.hpp"
 int main(){
+	Bitboards::init();
 	Position p;
-	std::cout << p.to_string() << "\n";
+	p.generate_trivial();
 }
