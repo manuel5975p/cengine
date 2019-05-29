@@ -36,7 +36,12 @@ inline constexpr char pieceChar(Piece p){
 	default      :return 'X';break;
 	}
 }
-
+inline std::string square_to_string(unsigned int square){
+	std::string ret(2,2);
+	ret[0] = 'A' + square % 8;
+	ret[1] = '0' + square / 8 + 1;
+	return ret;
+}
 inline std::string bb_to_string(Bitboard x, Piece p = NO_PIECE){
 	std::string ret(72, 0);
 	std::size_t pos = 0;

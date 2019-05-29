@@ -205,7 +205,27 @@ enum Piece {
 constexpr static std::array<Piece, 12> pieces = {W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
 B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING};
 
+constexpr static std::array<Piece, 6> white_pieces = {W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING};
+
+constexpr static std::array<Piece, 6> black_pieces = {B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING};
+
 constexpr static std::array<PieceType, 6> piece_types = {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
+
+constexpr inline PieceType get_type(Piece p){
+  switch(p){
+    case W_PAWN: return PAWN; break;
+    case W_ROOK: return ROOK; break;
+    case W_KNIGHT: return KNIGHT; break;
+    case W_BISHOP: return BISHOP; break;
+    case W_QUEEN: return QUEEN; break;
+    case W_KING: return KING; break;
+    default: assert(false && ("INVALID_PIECE")); return NO_PIECE_TYPE; break;
+  }
+}
+constexpr inline Color opp(Color c){
+  if(c == WHITE)return BLACK;
+  return WHITE;
+}
 
 extern Value PieceValue[PHASE_NB][PIECE_NB];
 

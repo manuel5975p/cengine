@@ -1,7 +1,9 @@
 #ifndef POSITION_HPP_INCLUDED
 #define POSITION_HPP_INCLUDED
 #include "types.hpp"
+#include "move.hpp"
 #include <string>
+#include <vector>
 template<Piece p> constexpr size_t compress_piece()  {return -1;}
 template<> constexpr size_t compress_piece<W_PAWN>  (){return 0;}
 template<> constexpr size_t compress_piece<W_KNIGHT>  (){return 1;}
@@ -57,10 +59,11 @@ struct Position{
 	Bitboard& get(){
 		return piece_boards[compress_piece<p>()];
 	}
+	Bitboard get(Color c)const;
 	const Bitboard& get(Piece p)const;
 	Bitboard& get(Piece p);
 	std::string to_string()const;
-	Bitboard generate_trivial(Color c)const;
+	std::vector<complete_move> generate_trivial(Color c)const;
 	Bitboard occupied()const;
 };
 #endif //POSITION_HPP_INCLUDED
