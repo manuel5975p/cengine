@@ -53,11 +53,11 @@ inline void print(Bitboard x, std::ostream& out = std::cout){
 }
 inline std::string operator|(const std::string& a, const std::string& b){
 	assert(a.size() == b.size() && "Combining strings with different lengths.");
-	std::string ret(a.size(), '0');
+	std::string ret(a.size(), '.');
 	for(std::size_t i = 0;i < a.size();i++){
-		assert((a[i] == '0' || b[i] == '0') && "Occupancies coincide");
-		if(a[i] != '0')ret[i] = a[i];
-		else if(b[i] != '0'){ret[i] = b[i];}
+		assert((a[i] == '.' || b[i] == '.' || (a[i] == '\n' && b[i] == '\n')) && "Occupancies coincide");
+		if(a[i] != '.')ret[i] = a[i];
+		else if(b[i] != '.'){ret[i] = b[i];}
 	}
 	return ret;
 }

@@ -1,6 +1,7 @@
 #include "position.hpp"
 #include "io.hpp"
-Bitboard Position::get(Piece p)const{
+#include "bitboard.hpp"
+const Bitboard& Position::get(Piece p)const{
 	return piece_boards[compress_piece(p)];
 }
 Bitboard& Position::get(Piece p){
@@ -12,4 +13,7 @@ std::string Position::to_string()const{
 		ret = ret | bb_to_string(piece_boards[i], piece_types[i]);
 	}
 	return ret;
+}
+Bitboard Position::generateTrivial(){
+	
 }
