@@ -14,7 +14,7 @@ template <typename T, std::size_t _max_size> struct stackvector {
   typedef std::ptrdiff_t difference_type;
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
-  stackvector() : m_size(0) {}
+  constexpr stackvector() : m_size(0) {}
   void fill(const value_type &u) { std::fill_n(begin(), size(), u); }
   void push_back(const value_type &v) { m_data[m_size++] = v; }
   void push_back(value_type &&v) { m_data[m_size++] = std::move(v); }
