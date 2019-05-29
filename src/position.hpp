@@ -2,6 +2,7 @@
 #define POSITION_HPP_INCLUDED
 #include "types.hpp"
 #include "move.hpp"
+#include "stackvector.hpp"
 #include <string>
 #include <vector>
 template<Piece p> constexpr size_t compress_piece()  {return -1;}
@@ -63,7 +64,7 @@ struct Position{
 	const Bitboard& get(Piece p)const;
 	Bitboard& get(Piece p);
 	std::string to_string()const;
-	std::vector<complete_move> generate_trivial(Color c)const;
+	stackvector<complete_move, 218> generate_trivial(Color c)const;
 	Bitboard occupied()const;
 };
 #endif //POSITION_HPP_INCLUDED

@@ -35,12 +35,11 @@ Bitboard Position::occupied()const{
 	}
 	return x;
 }
-std::vector<complete_move> Position::generate_trivial(Color color) const{
+stackvector<complete_move, 218>Position::generate_trivial(Color color) const{
 	Bitboard occupied = this->occupied();
 	Bitboard ours = get(color);
 	Bitboard theirs = get(opp(color));
-	std::vector<complete_move> moves;
-	moves.reserve(120);
+	stackvector<complete_move, 218> moves;
 	if(color == WHITE){
 		Bitboard pboard = this->get(W_PAWN);
 		while(pboard){

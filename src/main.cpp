@@ -8,9 +8,10 @@
 int main(){
 	Bitboards::init();
 	Position p;
-	std::vector<complete_move> moves = p.generate_trivial(WHITE);
+	stackvector<complete_move, 218> moves = p.generate_trivial(WHITE);
 	for(auto& a : moves){
 		std::cout << a.to_string() << std::endl;
 	}
+	std::cout << sizeof(moves) << "\n";
 }
 

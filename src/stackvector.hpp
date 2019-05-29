@@ -14,7 +14,7 @@ template <typename T, std::size_t _max_size> struct stackvector {
   typedef std::ptrdiff_t difference_type;
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
-  constexpr stackvector() : m_size(0) {}
+  stackvector() : m_size(0) {}
   void fill(const value_type &u) { std::fill_n(begin(), size(), u); }
   void push_back(const value_type &v) { m_data[m_size++] = v; }
   void push_back(value_type &&v) { m_data[m_size++] = std::move(v); }
@@ -22,7 +22,10 @@ template <typename T, std::size_t _max_size> struct stackvector {
   void swap(stackvector &other) {
     std::swap_ranges(begin(), end(), other.begin());
   }
-
+template<typename... Ts>
+void emplace_back(Ts... args){
+    push_back(value_type(std::forward<Ts>(args)...));
+}
   constexpr iterator begin() noexcept { return iterator(data()); }
 
   constexpr const_iterator begin() const noexcept {
@@ -71,7 +74,9 @@ template <typename T, std::size_t _max_size> struct stackvector {
 
   constexpr size_type max_size() const noexcept { return m_max_size; }
 
-  constexpr T *data() const noexcept { return m_data; }
+  constexpr const T* data() const noexcept { return m_data; }
+
+  constexpr T* data() noexcept { return m_data; }
 
   constexpr bool empty() const noexcept { return size() == 0; }
 

@@ -15,6 +15,7 @@ struct complete_move {
    : moving_piece(mp), xor_mask(xm) {
     assert(popcount(xm) == 2 && "Move goes to the same square");
   }
+  complete_move(){}
   std::string to_string(){
       return std::string("Move: ") + pieceChar(moving_piece) + square_to_string(lsb(xor_mask)) + square_to_string(msb(xor_mask));
     }
