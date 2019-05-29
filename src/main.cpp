@@ -4,6 +4,7 @@
 #include "position.hpp"
 #include "move.hpp"
 #include "io.hpp"
+#include "stackvector.hpp"
 int main(){
 	Bitboards::init();
 	Position p;

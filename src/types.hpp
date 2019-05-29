@@ -211,6 +211,11 @@ constexpr static std::array<Piece, 6> black_pieces = {B_PAWN, B_KNIGHT, B_BISHOP
 
 constexpr static std::array<PieceType, 6> piece_types = {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
 
+template<Color c>
+constexpr const inline std::array<Piece, 6>& get_pieces(){
+  return c == WHITE ? white_pieces : black_pieces;
+}
+
 constexpr inline PieceType get_type(Piece p){
   switch(p){
     case W_PAWN: return PAWN; break;

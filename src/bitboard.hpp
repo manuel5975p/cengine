@@ -262,18 +262,32 @@ inline Bitboard attacks_bb(Square s, Bitboard occupied) {
   const Magic& m = Pt == ROOK ? RookMagics[s] : BishopMagics[s];
   return m.attacks[m.index(occupied)];
 }
-template<Color c = WHITE>
 inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {
 
-
+  assert(pt != PAWN);
   switch (pt)
   {
   case BISHOP: return attacks_bb<BISHOP>(s, occupied);
   case ROOK  : return attacks_bb<  ROOK>(s, occupied);
   case QUEEN : return attacks_bb<BISHOP>(s, occupied) | attacks_bb<ROOK>(s, occupied);
-  case PAWN  : return PawnAttacks[c][s];
   default    : return PseudoAttacks[pt][s];
   }
+}
+template<Color c>
+Bitboard pawn_attacks(Square s, Bitboard occ, Bitboard their){
+  Bitboard ret = 0;
+  Bitboard square_board = Bitboard(1) << s;
+  Bitboard up = shift<c == WHITE ? NORTH : SOUTH>(square_board);
+  up &= ~occ;
+  ret |= up;
+  if(up){
+    up = shift<c == WHITE ? NORTH : SOUTH>(up);
+    up &= ~occ;
+    ret |= up;
+  }
+  Bitboard diags = shift<c == WHITE ? NORTH_WEST : SOUTH_WEST>(square_board) | shift<c == WHITE ? NORTH_EAST : SOUTH_EAST>(square_board);
+  ret |= (diags & their);
+  return ret;
 }
 
 
