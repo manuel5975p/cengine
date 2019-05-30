@@ -23,10 +23,10 @@ template <typename T, std::size_t _max_size> struct stackvector {
   void swap(stackvector &other) {
     std::swap_ranges(begin(), end(), other.begin());
   }
-template<typename... Ts>
-void emplace_back(Ts... args){
+  template<typename... Ts>
+  void emplace_back(Ts... args){
     push_back(value_type(std::forward<Ts>(args)...));
-}
+  }
   constexpr iterator begin() noexcept { return iterator(data()); }
 
   constexpr const_iterator begin() const noexcept {

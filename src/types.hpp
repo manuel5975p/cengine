@@ -224,6 +224,12 @@ constexpr inline PieceType get_type(Piece p){
     case W_BISHOP: return BISHOP; break;
     case W_QUEEN: return QUEEN; break;
     case W_KING: return KING; break;
+	case B_PAWN: return PAWN; break;
+    case B_ROOK: return ROOK; break;
+    case B_KNIGHT: return KNIGHT; break;
+    case B_BISHOP: return BISHOP; break;
+    case B_QUEEN: return QUEEN; break;
+    case B_KING: return KING; break;
     default: assert(false && ("INVALID_PIECE")); return NO_PIECE_TYPE; break;
   }
 }

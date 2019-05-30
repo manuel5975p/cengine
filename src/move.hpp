@@ -6,18 +6,15 @@
 #include <string>
 struct complete_move {
   Piece moving_piece;
-  Bitboard xor_mask;
-  complete_move(unsigned int from, unsigned int to, Piece mp)
-   : moving_piece(mp),  xor_mask((1ULL << from) | (1ULL << to)) {
+  Square from;
+  Square to;
+  complete_move(Square _from, Square _to, Piece mp)
+   : moving_piece(mp),  from(_from), to(_to) {
     assert(from != to && "Move goes to the same square");
-  }
-  complete_move(Bitboard xm, Piece mp)
-   : moving_piece(mp), xor_mask(xm) {
-    assert(popcount(xm) == 2 && "Move goes to the same square");
   }
   complete_move(){}
   std::string to_string(){
-      return std::string("Move: ") + pieceChar(moving_piece) + square_to_string(lsb(xor_mask)) + square_to_string(msb(xor_mask));
+      return std::string("Move: ") + pieceChar(moving_piece) + square_to_string(from) + square_to_string(to);
     }
 };
 #endif

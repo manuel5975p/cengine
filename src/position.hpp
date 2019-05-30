@@ -64,7 +64,7 @@ struct Position{
 	const Bitboard& get(Piece p)const;
 	Bitboard& get(Piece p);
 	std::string to_string()const;
-	stackvector<complete_move, 218> generate_trivial(Color c)const;
+	stackvector<complete_move, 80> generate_trivial(Color c)const;
 	Bitboard occupied()const;
 };
 #endif //POSITION_HPP_INCLUDED

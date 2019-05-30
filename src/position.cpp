@@ -35,11 +35,11 @@ Bitboard Position::occupied()const{
 	}
 	return x;
 }
-stackvector<complete_move, 218>Position::generate_trivial(Color color) const{
+stackvector<complete_move, 80>Position::generate_trivial(Color color) const{
 	Bitboard occupied = this->occupied();
 	Bitboard ours = get(color);
 	Bitboard theirs = get(opp(color));
-	stackvector<complete_move, 218> moves;
+	stackvector<complete_move, 80> moves;
 	if(color == WHITE){
 		Bitboard pboard = this->get(W_PAWN);
 		while(pboard){
@@ -47,7 +47,7 @@ stackvector<complete_move, 218>Position::generate_trivial(Color color) const{
 			Bitboard attacks = pawn_attacks<WHITE>(lsb(single_piece), occupied, theirs);
 			while(attacks){
 				Bitboard attack_bit = attacks & -attacks;
-				moves.emplace_back(attack_bit | single_piece, W_PAWN);
+				moves.push_back(complete_move(lsb(single_piece),lsb(attack_bit), W_PAWN));
 				attacks ^= attack_bit;
 			}
 			pboard ^= single_piece;
@@ -62,7 +62,7 @@ stackvector<complete_move, 218>Position::generate_trivial(Color color) const{
 				attacks &= (~ours);
 				while(attacks){
 					Bitboard attack_bit = attacks & -attacks;
-					moves.emplace_back(attack_bit | single_piece, p);
+					moves.push_back(complete_move(lsb(single_piece),lsb(attack_bit), p));
 					attacks ^= attack_bit;
 				}
 				pboard ^= single_piece;
@@ -70,7 +70,32 @@ stackvector<complete_move, 218>Position::generate_trivial(Color color) const{
 		}
 	}
 	else if(color == BLACK){
-		
+		Bitboard pboard = this->get(B_PAWN);
+		while(pboard){
+			Bitboard single_piece = pboard & -pboard;
+			Bitboard attacks = pawn_attacks<BLACK>(lsb(single_piece), occupied, theirs);
+			while(attacks){
+				Bitboard attack_bit = attacks & -attacks;
+				moves.push_back(complete_move(lsb(single_piece),lsb(attack_bit), B_PAWN));
+				attacks ^= attack_bit;
+			}
+			pboard ^= single_piece;
+		}
+		for(size_t i = 1; i < black_pieces.size();i++){
+			Piece p = black_pieces[i];
+			Bitboard pboard = this->get(p);
+			while(pboard){
+				Bitboard single_piece = pboard & -pboard;
+				Bitboard attacks = attacks_bb(get_type(p), lsb(single_piece), occupied);
+				attacks &= (~ours);
+				while(attacks){
+					Bitboard attack_bit = attacks & -attacks;
+					moves.push_back(complete_move(lsb(single_piece),lsb(attack_bit), p));
+					attacks ^= attack_bit;
+				}
+				pboard ^= single_piece;
+			}
+		}
 	}
 	return moves;
 }
