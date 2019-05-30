@@ -2,6 +2,7 @@
 #define STACKVECTOR_HPP
 #include <array>
 #include <cstddef>
+#include <cassert>
 template <typename T, std::size_t _max_size> struct stackvector {
   typedef T value_type;
   typedef value_type *pointer;
@@ -79,7 +80,9 @@ void emplace_back(Ts... args){
   constexpr T* data() noexcept { return m_data; }
 
   constexpr bool empty() const noexcept { return size() == 0; }
-
+  
+  T& operator[](size_type i) noexcept{assert(i < size());return m_data[i];}
+  const T& operator[](size_type i)const noexcept{assert(i < size());return m_data[i];}
 private:
   std::size_t m_size;
   constexpr static std::size_t m_max_size = _max_size;
