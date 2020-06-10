@@ -14,7 +14,7 @@ uint64_t nanoTime(){
 int main(){
 	Bitboards::init();
 	Position p;
-	uint64_t optinhib = 0;
+	//uint64_t optinhib = 0;
 	/*auto t1 = nanoTime();
 	for(uint64_t i = 0;i < 20000000;i++){
 		stackvector<complete_move, 80> moves = p.generate_trivial(WHITE);
@@ -22,11 +22,16 @@ int main(){
 		p.piece_boards[0] |= 512;
 	}
 	auto t2 = nanoTime();*/
-	stackvector<complete_move, 80> moves = p.generate_trivial(BLACK);
+	p.get(B_QUEEN) |= (1ull << SQ_H4);
+	std::cout << p.to_string() << "\n";
+	stackvector<complete_move, 256> moves = p.generate_legal(WHITE);
 	for(auto& a : moves){
 		std::cout << a.to_string() << std::endl;
 	}
-	std::cout << sizeof(Piece) << "\n";
+	std::cout << moves.size() << "\n";
+	//p.apply_move(moves[0]);
+	//std::cout << p.to_string() << "\n";
+	//std::cout << sizeof(Piece) << "\n";
 	//std::cout << 20000000.0 / (t2 - t1) << "\n" << optinhib << "\n";
 }
 

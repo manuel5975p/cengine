@@ -37,20 +37,21 @@ constexpr static size_t compress_piece(Piece p){
 }
 struct Position{
 	std::array<Bitboard, 12> piece_boards = {};
+	Color at_move;
 	Position(){
 		get(W_PAWN) = 0xff00;
 		get(W_ROOK) = (1ULL | 1ULL << 7);
 		get(W_KNIGHT) = (1ULL << 1| 1ULL << 6);
 		get(W_BISHOP) = (1ULL << 2| 1ULL << 5);
-		get(W_KING) = (1ULL << 3);
-		get(W_QUEEN) = (1ULL << 4);
+		get(W_KING) = (1ULL << 4);
+		get(W_QUEEN) = (1ULL << 3);
 		
 		get(B_PAWN) = 0xff000000000000;
 		get(B_ROOK) = (1ULL << 63 | 1ULL << 56);
 		get(B_KNIGHT) = (1ULL << 57 | 1ULL << 62);
 		get(B_BISHOP) = (1ULL << 58 | 1ULL << 61);
-		get(B_KING) = (1ULL << 59);
-		get(B_QUEEN) = (1ULL << 60);
+		get(B_KING) = (1ULL << 60);
+		get(B_QUEEN) = (1ULL << 59);
 	}
 	template<Piece p>
 	Bitboard get()const{
@@ -64,7 +65,13 @@ struct Position{
 	const Bitboard& get(Piece p)const;
 	Bitboard& get(Piece p);
 	std::string to_string()const;
-	stackvector<complete_move, 80> generate_trivial(Color c)const;
+	stackvector<complete_move, 256> generate_trivial(Color c)const;
+	stackvector<complete_move, 256> generate_legal(Color c)const;
+	bool check(Color c)const;
+	void apply_move(const complete_move& move);
+	void revert_move(const complete_move& move);
+	void revert_move_checked(const complete_move& move);
+	void apply_move_checked(const complete_move& move);
 	Bitboard occupied()const;
 };
 #endif //POSITION_HPP_INCLUDED

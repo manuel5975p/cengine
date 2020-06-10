@@ -45,9 +45,9 @@ inline std::string square_to_string(unsigned int square){
 inline std::string bb_to_string(Bitboard x, Piece p = NO_PIECE){
 	std::string ret(72, 0);
 	std::size_t pos = 0;
-	for(std::size_t i = 64;i >= 8;i -= 8){
-		for(std::size_t j = 1;j <= 8;j++){
-			ret[pos++] = !!(x & (1ULL << (i - j))) ? pieceChar(p) : '.';
+	for(std::size_t i = 56;i <= 56;i -= 8){
+		for(std::size_t j = 0;j <= 7;j++){
+			ret[pos++] = !!(x & (1ULL << (i + j))) ? pieceChar(p) : '.';
 		}
 		ret[pos++] = '\n';
 	}
