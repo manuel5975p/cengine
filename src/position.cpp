@@ -1,12 +1,6 @@
 #include "position.hpp"
 #include "io.hpp"
 #include "bitboard.hpp"
-const Bitboard& Position::get(Piece p)const{
-	return piece_boards[compress_piece(p)];
-}
-Bitboard& Position::get(Piece p){
-	return piece_boards[compress_piece(p)];
-}
 std::string Position::to_string()const{
 	std::string ret = bb_to_string(get(W_PAWN), W_PAWN);
 	for(int i = 1;i < 12;i++){
@@ -190,12 +184,16 @@ bool Position::check(Color c)const{
 stackvector<complete_move, 256> Position::generate_legal(Color c)const{
 	stackvector<complete_move, 256> ret = generate_trivial(c);
 	Position p(*this);
-	for(auto it = ret.begin();it != ret.end();it++){
+	
+	for(auto it = ret.begin();it != ret.end();){
 		complete_move cmm = *it;
 		p.apply_move(cmm);
 		if(p.check(c)){
 			std::swap(*it, *(ret.end() - 1));
 			ret.pop_back();
+		}
+		else{
+			it++;
 		}
 		p.revert_move(cmm);
 	}

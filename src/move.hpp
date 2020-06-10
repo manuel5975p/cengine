@@ -10,7 +10,7 @@ struct complete_move {
   Square to;
   complete_move(Square _from, Square _to, Piece mp)
    : moving_piece(mp),  from(_from), to(_to) {
-    assert(from != to && "Move goes to the same square");
+    //assert(from != to && "Move goes to the same square");
   }
   complete_move(){}
   std::string to_string(){

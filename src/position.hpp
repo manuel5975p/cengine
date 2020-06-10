@@ -5,6 +5,8 @@
 #include "stackvector.hpp"
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <numeric>
 template<Piece p> constexpr size_t compress_piece()  {return -1;}
 template<> constexpr size_t compress_piece<W_PAWN>  (){return 0;}
 template<> constexpr size_t compress_piece<W_KNIGHT>  (){return 1;}
@@ -38,6 +40,10 @@ constexpr static size_t compress_piece(Piece p){
 struct Position{
 	std::array<Bitboard, 12> piece_boards = {};
 	Color at_move;
+	Square ep;
+	Position(Bitboard b){
+		std::fill(piece_boards.begin(), piece_boards.end(), b);
+	}
 	Position(){
 		get(W_PAWN) = 0xff00;
 		get(W_ROOK) = (1ULL | 1ULL << 7);
@@ -52,6 +58,12 @@ struct Position{
 		get(B_BISHOP) = (1ULL << 58 | 1ULL << 61);
 		get(B_KING) = (1ULL << 60);
 		get(B_QUEEN) = (1ULL << 59);
+		ep = SQ_NONE;
+		at_move = WHITE;
+	}
+	bool operator==(const Position& other)const{
+		bool a = std::equal(other.piece_boards.begin(), other.piece_boards.end(), piece_boards.begin());
+		return a && (ep == other.ep);
 	}
 	template<Piece p>
 	Bitboard get()const{
@@ -61,9 +73,24 @@ struct Position{
 	Bitboard& get(){
 		return piece_boards[compress_piece<p>()];
 	}
+	const Bitboard& get(Piece p)const{
+		return piece_boards[compress_piece(p)];
+	}
+	size_t hash()const{
+		return std::accumulate(piece_boards.begin(), piece_boards.end(), 0ull, std::bit_xor<size_t>());
+	}
+	Bitboard& get(Piece p){
+		return piece_boards[compress_piece(p)];
+	}
+
+	const Bitboard& get(Color c, PieceType p)const{
+		return piece_boards[compress_piece(Piece(p + (c << 3)))];
+	}
+	Bitboard& get(Color c, PieceType p){
+		return piece_boards[compress_piece(Piece(p + (c << 3)))];
+	}
 	Bitboard get(Color c)const;
-	const Bitboard& get(Piece p)const;
-	Bitboard& get(Piece p);
+	
 	std::string to_string()const;
 	stackvector<complete_move, 256> generate_trivial(Color c)const;
 	stackvector<complete_move, 256> generate_legal(Color c)const;

@@ -54,7 +54,8 @@ else()
 	message("${Red}Doesn't support pext...${ColourReset}")
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -pedantic")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wall -Wextra -pedantic -march=native -flto -s -fomit-frame-pointer")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -pedantic -fopenmp")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wall -Wextra -pedantic -march=native -flto -s -fomit-frame-pointer -fopenmp")
 
 add_executable(cengine ${cengine_src})
+target_link_libraries(cengine gomp)

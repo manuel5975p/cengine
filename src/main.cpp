@@ -6,6 +6,7 @@
 #include "move.hpp"
 #include "io.hpp"
 #include "stackvector.hpp"
+#include "search.hpp"
 uint64_t nanoTime(){
 	using namespace std;
 	using namespace std::chrono;
@@ -22,13 +23,21 @@ int main(){
 		p.piece_boards[0] |= 512;
 	}
 	auto t2 = nanoTime();*/
-	p.get(B_QUEEN) |= (1ull << SQ_H4);
-	std::cout << p.to_string() << "\n";
-	stackvector<complete_move, 256> moves = p.generate_legal(WHITE);
-	for(auto& a : moves){
-		std::cout << a.to_string() << std::endl;
+	//p.get(B_QUEEN) |= (1ull << SQ_H4);
+	//std::cout << p.to_string() << "\n";
+	//stackvector<complete_move, 256> moves = p.generate_legal(WHITE);
+	//for(auto& a : moves){
+	//	std::cout << a.to_string() << std::endl;
+	//}
+	//std::cout << moves.size() << "\n";
+	search_state state;
+	popcount(5);
+	{
+		//negamax(p, 8,-1000000,1000000,state);
 	}
-	std::cout << moves.size() << "\n";
+	std::cout << evalcount << "\n";
+	std::cout << state.bestmove.to_string() << "\n";
+	std::cout << sizeof(pos_move_pair);
 	//p.apply_move(moves[0]);
 	//std::cout << p.to_string() << "\n";
 	//std::cout << sizeof(Piece) << "\n";
