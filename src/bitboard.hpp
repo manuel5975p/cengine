@@ -126,7 +126,10 @@ constexpr bool more_than_one(Bitboard b) {
 inline bool opposite_colors(Square s1, Square s2) {
   return bool(DarkSquares & s1) != bool(DarkSquares & s2);
 }
-
+constexpr Bitboard W_QUEENSIDE_CASTLING_EMPTYNESS_REQUIRED = (1 << 1) | (1 << 2) | (1 << 3);
+constexpr Bitboard  W_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED = (1 << 5) | (1 << 6);
+constexpr Bitboard B_QUEENSIDE_CASTLING_EMPTYNESS_REQUIRED = (1ULL << 57) | (1ULL << 58) | (1ULL << 59);
+constexpr Bitboard  B_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED = (1ULL << 61) | (1ULL << 62);
 
 /// rank_bb() and file_bb() return a bitboard representing all the squares on
 /// the given file or rank.
@@ -274,19 +277,20 @@ inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {
   }
 }
 template<Color c>
-Bitboard pawn_attacks(Square s, Bitboard occ, Bitboard their){
+Bitboard pawn_attacks(Square s, Bitboard occ, Bitboard their, Square en_passant){
   Bitboard ret = 0;
+  Bitboard ep_bb = Bitboard(1) << en_passant;
   Bitboard square_board = Bitboard(1) << s;
   Bitboard up = shift<c == WHITE ? NORTH : SOUTH>(square_board);
   up &= ~occ;
   ret |= up;
-  if(up){
+  if(up && ((c == WHITE && unsigned(s) / 8 == 1) || (c == BLACK && unsigned(s) / 8 == 6))){
     up = shift<c == WHITE ? NORTH : SOUTH>(up);
     up &= ~occ;
     ret |= up;
   }
   Bitboard diags = shift<c == WHITE ? NORTH_WEST : SOUTH_WEST>(square_board) | shift<c == WHITE ? NORTH_EAST : SOUTH_EAST>(square_board);
-  ret |= (diags & their);
+  ret |= (diags & (their | ep_bb));
   return ret;
 }
 
@@ -395,6 +399,25 @@ inline Square pop_lsb(Bitboard* b) {
 
 inline Square frontmost_sq(Color c, Bitboard b) { return c == WHITE ? msb(b) : lsb(b); }
 inline Square  backmost_sq(Color c, Bitboard b) { return c == WHITE ? lsb(b) : msb(b); }
+struct biterator{
+  Bitboard bb;
+  Bitboard cbb;
+  biterator(Bitboard b) : bb(b), cbb(b & (-b)){
 
+  }
+  Bitboard operator*()const noexcept{
+    return cbb;
+  }
+  biterator& operator++(){
+    bb &= (~cbb);
+    cbb = bb & (-bb);
+    return *this;
+  }
+  biterator operator++(int){
+    biterator clon(*this);
+    this->operator++();
+    return clon;
+  }
+};
 #endif // #ifndef BITBOARD_H_INCLUDED
 

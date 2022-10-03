@@ -5,45 +5,43 @@
 #include "stackvector.hpp"
 #include <string>
 #include <vector>
+#include <array>
 #include <algorithm>
 #include <numeric>
-template<Piece p> constexpr size_t compress_piece()  {return -1;}
-template<> constexpr size_t compress_piece<W_PAWN>  (){return 0;}
-template<> constexpr size_t compress_piece<W_KNIGHT>  (){return 1;}
-template<> constexpr size_t compress_piece<W_BISHOP>(){return 2;}
-template<> constexpr size_t compress_piece<W_ROOK>(){return 3;}
-template<> constexpr size_t compress_piece<W_QUEEN> (){return 4;}
-template<> constexpr size_t compress_piece<W_KING>  (){return 5;}
-template<> constexpr size_t compress_piece<B_PAWN>  (){return 6;}
-template<> constexpr size_t compress_piece<B_KNIGHT>  (){return 7;}
-template<> constexpr size_t compress_piece<B_BISHOP>(){return 8;}
-template<> constexpr size_t compress_piece<B_ROOK>(){return 9;}
-template<> constexpr size_t compress_piece<B_QUEEN> (){return 10;}
-template<> constexpr size_t compress_piece<B_KING>  (){return 11;}
-constexpr static size_t compress_piece(Piece p){
-	switch(p){
-		case W_PAWN    :return 0 ;     break;
-		case W_KNIGHT  :return 1 ;     break;
-		case W_BISHOP  :return 2 ;     break;
-		case W_ROOK    :return 3 ;     break;
-		case W_QUEEN   :return 4 ;     break;
-		case W_KING    :return 5 ;     break;
-		case B_PAWN    :return 6 ;     break;
-		case B_KNIGHT  :return 7 ;     break;
-		case B_BISHOP  :return 8 ;     break;
-		case B_ROOK    :return 9 ;     break;
-		case B_QUEEN   :return 10;     break;
-		case B_KING    :return 11;     break;
-		default        :return -1;     break;
+#include <Eigen/Dense>
+#include <xoshiro.hpp>
+using hash_int = std::uint64_t;
+struct zobrist_table{
+	std::array<std::array<hash_int, 64>, 12> values;
+	zobrist_table(){
+		xoshiro_256 gen(~69420u);
+		std::uniform_int_distribution<hash_int> dis(0, std::numeric_limits<hash_int>::max());
+		for(size_t i = 0;i < 12;i++){
+			for(size_t j = 0;j < 64;j++){
+				values[i][j] = dis(gen);
+			}
+		}
 	}
-}
+};
+extern zobrist_table global_zobrist_table;
+struct special_members{
+	CastlingRight cr;
+	std::uint8_t since_capture;
+	hash_int hash;
+	Square ep;
+	special_members() : cr(ANY_CASTLING), since_capture(0), hash(0), ep(SQ_NONE){}
+	bool operator==(const special_members& other)const{
+		return cr == other.cr && since_capture == other.since_capture && hash == other.hash && ep == other.ep;
+	}
+};
 struct Position{
 	std::array<Bitboard, 12> piece_boards = {};
 	Color at_move;
-	Square ep;
+	special_members spec_mem;
 	Position(Bitboard b){
 		std::fill(piece_boards.begin(), piece_boards.end(), b);
 	}
+	Position(const std::string& fen);
 	Position(){
 		get(W_PAWN) = 0xff00;
 		get(W_ROOK) = (1ULL | 1ULL << 7);
@@ -58,12 +56,12 @@ struct Position{
 		get(B_BISHOP) = (1ULL << 58 | 1ULL << 61);
 		get(B_KING) = (1ULL << 60);
 		get(B_QUEEN) = (1ULL << 59);
-		ep = SQ_NONE;
 		at_move = WHITE;
+		spec_mem.hash = this->hash();
 	}
 	bool operator==(const Position& other)const{
 		bool a = std::equal(other.piece_boards.begin(), other.piece_boards.end(), piece_boards.begin());
-		return a && (ep == other.ep);
+		return a && (spec_mem == other.spec_mem);
 	}
 	template<Piece p>
 	Bitboard get()const{
@@ -76,8 +74,18 @@ struct Position{
 	const Bitboard& get(Piece p)const{
 		return piece_boards[compress_piece(p)];
 	}
-	size_t hash()const{
-		return std::accumulate(piece_boards.begin(), piece_boards.end(), 0ull, std::bit_xor<size_t>());
+	hash_int hash()const{
+		hash_int h(0);
+		for(const auto& piece : pieces){
+			Bitboard bb = get(piece);
+			biterator it(bb);
+			while(*it){
+				Bitboard singlebit = *it;
+				h ^= global_zobrist_table.values[piece][lsb(singlebit)];
+				it++;
+			}
+		}
+		return h;
 	}
 	Bitboard& get(Piece p){
 		return piece_boards[compress_piece(p)];
@@ -94,11 +102,14 @@ struct Position{
 	std::string to_string()const;
 	stackvector<complete_move, 256> generate_trivial(Color c)const;
 	stackvector<complete_move, 256> generate_legal(Color c)const;
+	Eigen::VectorXf to_one_hot_repr()const;
 	bool check(Color c)const;
+	bool under_attack_for(Color c, Square s)const;
 	void apply_move(const complete_move& move);
 	void revert_move(const complete_move& move);
-	void revert_move_checked(const complete_move& move);
-	void apply_move_checked(const complete_move& move);
+	bool revert_move_checked(const complete_move& move);
+	bool apply_move_checked(const complete_move& move);
 	Bitboard occupied()const;
+	std::string fen()const;
 };
 #endif //POSITION_HPP_INCLUDED

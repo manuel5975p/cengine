@@ -18,7 +18,23 @@ template<> inline char pieceChar<B_KNIGHT>(){return 'n';}
 template<> inline char pieceChar<B_BISHOP>(){return 'b';}
 template<> inline char pieceChar<B_QUEEN> (){return 'q';}
 template<> inline char pieceChar<B_KING>  (){return 'k';}
-
+inline constexpr Piece charPiece(char x){
+	switch(x){
+		case 'P':return W_PAWN  ;     break;
+		case 'R':return W_ROOK  ;     break;
+		case 'N':return W_KNIGHT;     break;
+		case 'B':return W_BISHOP;     break;
+		case 'Q':return W_QUEEN ;     break;
+		case 'K':return W_KING  ;     break;
+		case 'p':return B_PAWN  ;     break;
+		case 'r':return B_ROOK  ;     break;
+		case 'n':return B_KNIGHT;     break;
+		case 'b':return B_BISHOP;     break;
+		case 'q':return B_QUEEN ;     break;
+		case 'k':return B_KING  ;     break;
+	default      :return NO_PIECE;     break;
+	}
+}
 inline constexpr char pieceChar(Piece p){
 	switch(p){
 	case W_PAWN  :return 'P';break;
@@ -36,11 +52,19 @@ inline constexpr char pieceChar(Piece p){
 	default      :return 'X';break;
 	}
 }
-inline std::string square_to_string(unsigned int square){
+inline std::string square_to_string(Square sq){
 	std::string ret(2,2);
-	ret[0] = 'A' + square % 8;
+	int square(sq);
+	ret[0] = 'a' + square % 8;
 	ret[1] = '0' + square / 8 + 1;
 	return ret;
+}
+inline Square string_to_square(const std::string& str){
+	std::string ret(2,2);
+	int file, rank;
+	file = str[0] - 'a';
+	rank = str[1] - '0' - 1;
+	return Square(rank * 8 + file);
 }
 inline std::string bb_to_string(Bitboard x, Piece p = NO_PIECE){
 	std::string ret(72, 0);
