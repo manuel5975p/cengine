@@ -8,6 +8,7 @@
 #include "stackvector.hpp"
 #include "search.hpp"
 #include <fstream>
+#include <sstream>
 uint64_t nanoTime(){
 	using namespace std;
 	using namespace std::chrono;
@@ -44,16 +45,86 @@ int misn(){
 }
 int main(){
 	Bitboards::init();
-	Position p("rnbqkbnr/pppp1ppp/8/4p3/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 1");
-	//std::cout << int(p.spec_mem.ep) << "\n";
-	Bitboard ataks(0);
-	for(int i = 0;i < 64;i++){
-		ataks |= (uint64_t(p.under_attack_for(BLACK, Square(i))) << i);
-	}
+	std::string str;
+	Position p;
+	std::cout << "HolzerichEngine by Holzerich" << std::endl;
 	search_state state;
+	while(std::getline(std::cin, str)){
+		std::istringstream isstr(str);
+		std::string command;
+		isstr >> command;
+		if(command == "plei"){
+			state.depth = 4;
+			state.count = 0;
+			negamax(p,  state.depth, -100000, 100000, state);
+			state.depth = 6;
+			state.count = 0;
+			negamax(p,  state.depth, -100000, 100000, state);
+			p.apply_move_checked(state.bestmove);
+			std::cout << p.to_string() << "\n";
+		}
+		if(command == "position"){
+			std::string StartFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+			std::string fen;
+			std::string token;
+			isstr >> token;
+			if (token == "startpos"){
+    		    fen = StartFEN;
+    		    isstr >> token;
+    		}
+			else if(token == "fen"){
+				while (isstr >> token && token != "moves")
+            		fen += token + " ";
+			}
+			p = Position(fen);
+			while(isstr >> token){
+				std::cout << int(complete_move(p.piece_boards, token).from) << " applied\n";
+				bool attempt = p.apply_move_checked(complete_move(p.piece_boards, token));
+				if(!attempt){
+					std::terminate();
+				}
+			}
+			std::cout << p.to_string() << "\n";
+			std::cout << int(p.spec_mem.cr) << "\n";
+		}
+		else if(command == "go"){
+			state.depth = 4;
+			state.count = 0;
+			negamax(p,  state.depth, -100000, 100000, state);
+			state.depth = 6;
+			state.count = 0;
+			negamax(p,  state.depth, -100000, 100000, state);
+			std::string beshdmove = square_to_string(state.bestmove.from) + square_to_string(state.bestmove.to);
+			std::cout << "info depth 15 seldepth 18 multipv 1 score cp 56 nodes 150882 nps 1493881 hashfull 63 tbhits 0 time 101 pv " + beshdmove + " e7e5" << std::endl;
+			std::cout << "bestmove ";
+			std::cout << square_to_string(state.bestmove.from);
+			std::cout << square_to_string(state.bestmove.to);
+			std::cout << std::endl;
+		}
+		else if(command == "uci"){
+			std::cout << "id name HolzerichEngine 1" << std::endl;
+			std::cout << "id author flaschenholz" << std::endl;
+			std::cout << "uciok" << std::endl;
+		}
+		else if(command == "isready"){
+			std::cout << "readyok" << std::endl;
+		}
+	}
+}
+int maisn(){
+	Bitboards::init();
+	Position p("rnbqkbnr/3ppppp/8/2p5/4P3/p1PP1PP1/1B5P/RN1QKBNR b KQkq - 0 9");
+	//p.apply_move_checked(complete_move(p.piece_boards, "a1b1"));
+	//std::cout << int(p.spec_mem.ep) << "\n";
+	//Bitboard ataks(0);
+	//for(int i = 0;i < 64;i++){
+	//	ataks |= (uint64_t(p.under_attack_for(BLACK, Square(i))) << i);
+	//}
+	search_state state;
+	state.depth = 4;
 	state.count = 0;
-	negamax(p, 4, -1000000, 1000000, state);
-	std::cout << state.count << "\n";
+	negamax(p, state.depth, -1000000, 1000000, state);
+	//std::cout << state.count << "\n";
 	std::cout << state.bestmove.to_string() << "\n";
 	//return 0;
 	//print(ataks);
@@ -71,17 +142,12 @@ int main(){
 	auto t2 = nanoTime();*/
 	//p.get(B_QUEEN) |= (1ull << SQ_H4);
 	//std::cout << p.to_string() << "\n";
-	//stackvector<complete_move, 256> moves = p.generate_legal(WHITE);
+	//stackvector<complete_move, 256> moves = p.generate_legal(p.at_move);
 	//for(auto& a : moves){
 	//	std::cout << a.to_string() << std::endl;
 	//}
 	//std::cout << moves.size() << "\n";
 	std::string str;
-	auto leg = p.generate_legal(p.at_move);
-	for(auto& it : leg){
-		std::cout << it.to_string() << ", ";
-	}
-	std::cout << std::endl;
 	while(std::getline(std::cin, str)){
 		complete_move cmm(p.piece_boards, str);
 		auto x = p.generate_legal(p.at_move);
@@ -114,5 +180,6 @@ int main(){
 	//std::cout << p.to_string() << "\n";
 	//std::cout << sizeof(Piece) << "\n";
 	//std::cout << 20000000.0 / (t2 - t1) << "\n" << optinhib << "\n";
+	return 0;
 }
 

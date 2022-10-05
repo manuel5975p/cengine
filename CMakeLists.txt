@@ -25,8 +25,8 @@ endif()
 
 project(Cengine)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CXX_STANDARD 20)
 
 if(NOT CMAKE_BUILD_TYPE)
 	message("${Yellow}Build type not specified, assuming Release mode${ColourReset}")
@@ -54,7 +54,7 @@ else()
 	message("${Red}Doesn't support pext...${ColourReset}")
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -pedantic -fopenmp")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -pedantic -fopenmp -fsanitize=undefined -fsanitize=address -D_GLIBCXX_DEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wall -Wextra -pedantic -march=native -flto -s -fomit-frame-pointer -fopenmp")
 
 add_executable(cengine ${cengine_src})

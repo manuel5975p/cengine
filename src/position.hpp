@@ -8,11 +8,12 @@
 #include <array>
 #include <algorithm>
 #include <numeric>
-#include <Eigen/Dense>
+//#include <Eigen/Dense>
 #include <xoshiro.hpp>
 using hash_int = std::uint64_t;
 struct zobrist_table{
 	std::array<std::array<hash_int, 64>, 12> values;
+	std::array<hash_int, 4> castling_values;
 	zobrist_table(){
 		xoshiro_256 gen(~69420u);
 		std::uniform_int_distribution<hash_int> dis(0, std::numeric_limits<hash_int>::max());
@@ -20,6 +21,9 @@ struct zobrist_table{
 			for(size_t j = 0;j < 64;j++){
 				values[i][j] = dis(gen);
 			}
+		}
+		for(size_t i = 0;i < 4;i++){
+			castling_values[i] = dis(gen);
 		}
 	}
 };
@@ -81,9 +85,14 @@ struct Position{
 			biterator it(bb);
 			while(*it){
 				Bitboard singlebit = *it;
-				h ^= global_zobrist_table.values[piece][lsb(singlebit)];
+				h ^= global_zobrist_table.values[compress_piece(piece)][lsb(singlebit)];
 				it++;
 			}
+		}
+		biterator biter(spec_mem.cr);
+		while(*biter){
+			h ^= global_zobrist_table.castling_values[lsb(*biter)];
+			biter++;
 		}
 		return h;
 	}
@@ -102,7 +111,7 @@ struct Position{
 	std::string to_string()const;
 	stackvector<complete_move, 256> generate_trivial(Color c)const;
 	stackvector<complete_move, 256> generate_legal(Color c)const;
-	Eigen::VectorXf to_one_hot_repr()const;
+	//Eigen::VectorXf to_one_hot_repr()const;
 	bool check(Color c)const;
 	bool under_attack_for(Color c, Square s)const;
 	void apply_move(const complete_move& move);
@@ -111,5 +120,9 @@ struct Position{
 	bool apply_move_checked(const complete_move& move);
 	Bitboard occupied()const;
 	std::string fen()const;
+	hash_int quickhash()const{
+		assert(spec_mem.hash == hash());
+		return spec_mem.hash ^ hash_int(at_move);
+	}
 };
 #endif //POSITION_HPP_INCLUDED

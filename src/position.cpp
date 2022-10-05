@@ -211,10 +211,8 @@ void Position::apply_move(const complete_move& move){
 			//std::cout << square_to_string(move.to) << std::endl;
 			switch(move.to){
 				case SQ_G1:
-					print(get(W_ROOK));
 					get(W_ROOK) ^= square_bb(SQ_H1);
 					get(W_ROOK) ^= square_bb(SQ_F1);
-					print(get(W_ROOK));
 				break;
 				case SQ_C1:
 					get(W_ROOK) ^= square_bb(SQ_A1);
@@ -264,18 +262,33 @@ bool Position::apply_move_checked(const complete_move& move){
 	xor_mask ^= (1ULL << move.from);
 	xor_mask ^= (1ULL << move.to);
 	this->get(move.moving_piece) ^= xor_mask;
+	spec_mem.hash ^= global_zobrist_table.values[compress_piece(move.moving_piece)][int(move.from)];
+	spec_mem.hash ^= global_zobrist_table.values[compress_piece(move.moving_piece)][int(move.to)];
 	if(move.captured_piece != NO_PIECE){
 		this->get(move.captured_piece) &= ~(1ULL << move.to);
+		spec_mem.hash ^= global_zobrist_table.values[compress_piece(move.captured_piece)][int(move.to)];
+		spec_mem.since_capture = 0;
 	}
 	
 	if(move.moving_piece == W_PAWN || move.moving_piece == B_PAWN){
+		spec_mem.since_capture = 0;
 		if(move.to == this->spec_mem.ep){
+			
 			if(move.moving_piece == W_PAWN){
 				get(B_PAWN) &= ~(1ull << (int(this->spec_mem.ep) - 8));
+				spec_mem.hash ^= global_zobrist_table.values[compress_piece(B_PAWN)][int(this->spec_mem.ep) - 8];
 			}
 			else{
 				get(W_PAWN) &= ~(1ull << (int(this->spec_mem.ep) + 8));
+				spec_mem.hash ^= global_zobrist_table.values[compress_piece(W_PAWN)][int(this->spec_mem.ep) + 8];
 			}
+		}
+		else if(move.to <= SQ_H1 || move.to >= SQ_A8){
+			Bitboard bb = Bitboard(1) << move.to;
+			get(move.moving_piece) &= ~bb;
+			spec_mem.hash ^= global_zobrist_table.values[compress_piece(move.moving_piece)][int(move.to)];
+			spec_mem.hash ^= global_zobrist_table.values[compress_piece(make_piece(at_move, QUEEN))][int(move.to)];
+			get(at_move, QUEEN) |= bb;
 		}
 		if(std::abs(int(move.to) - int(move.from)) == 16){
 			this->spec_mem.ep = Square((int(move.to) + int(move.from)) / 2);
@@ -293,45 +306,76 @@ bool Position::apply_move_checked(const complete_move& move){
 			//std::cout << square_to_string(move.to) << std::endl;
 			switch(move.to){
 				case SQ_G1:
-					print(get(W_ROOK));
 					get(W_ROOK) ^= square_bb(SQ_H1);
 					get(W_ROOK) ^= square_bb(SQ_F1);
-					print(get(W_ROOK));
+					spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::WHITE_OO)) ? global_zobrist_table.castling_values[0] : 0);
+				    spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::WHITE_OOO)) ? global_zobrist_table.castling_values[1] : 0);
+				    spec_mem.cr &= ~(CastlingRight::WHITE_CASTLING);
+					spec_mem.hash ^= global_zobrist_table.values[compress_piece(W_ROOK)][int(SQ_H1)];
+					spec_mem.hash ^= global_zobrist_table.values[compress_piece(W_ROOK)][int(SQ_F1)];
 				break;
 				case SQ_C1:
 					get(W_ROOK) ^= square_bb(SQ_A1);
 					get(W_ROOK) ^= square_bb(SQ_D1);
+					spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::WHITE_OO)) ? global_zobrist_table.castling_values[0] : 0);
+					spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::WHITE_OOO)) ? global_zobrist_table.castling_values[1] : 0);
+					spec_mem.cr &= ~(CastlingRight::WHITE_CASTLING);
+					spec_mem.hash ^= global_zobrist_table.values[compress_piece(W_ROOK)][int(SQ_A1)];
+					spec_mem.hash ^= global_zobrist_table.values[compress_piece(W_ROOK)][int(SQ_D1)];
 				break;
 				case SQ_G8:
 					get(B_ROOK) ^= square_bb(SQ_H8);
 					get(B_ROOK) ^= square_bb(SQ_F8);
+					spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::BLACK_OOO)) ? global_zobrist_table.castling_values[3] : 0);
+					spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::BLACK_OO)) ? global_zobrist_table.castling_values[2] : 0);
+					spec_mem.cr &= ~(CastlingRight::BLACK_CASTLING);
+					spec_mem.hash ^= global_zobrist_table.values[compress_piece(B_ROOK)][int(SQ_H8)];
+					spec_mem.hash ^= global_zobrist_table.values[compress_piece(B_ROOK)][int(SQ_F8)];
 				break;
 				case SQ_C8:
 					get(B_ROOK) ^= square_bb(SQ_A8);
 					get(B_ROOK) ^= square_bb(SQ_D8);
+					spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::BLACK_OOO)) ? global_zobrist_table.castling_values[3] : 0);
+					spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::BLACK_OO)) ? global_zobrist_table.castling_values[2] : 0);
+					spec_mem.cr &= ~(CastlingRight::BLACK_CASTLING);
+					spec_mem.hash ^= global_zobrist_table.values[compress_piece(B_ROOK)][int(SQ_A8)];
+					spec_mem.hash ^= global_zobrist_table.values[compress_piece(B_ROOK)][int(SQ_D8)];
 				break;
 				default: assert(false);
 			}
 		}
 		else{
 			if(move.moving_piece == W_KING){
+				spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::WHITE_OO)) ? global_zobrist_table.castling_values[0] : 0);
+				spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::WHITE_OOO)) ? global_zobrist_table.castling_values[1] : 0);
 				spec_mem.cr &= ~(CastlingRight::WHITE_CASTLING);
 			}
 			if(move.moving_piece == B_KING){
+				spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::BLACK_OOO)) ? global_zobrist_table.castling_values[3] : 0);
+				spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::BLACK_OO)) ? global_zobrist_table.castling_values[2] : 0);
 				spec_mem.cr &= ~(CastlingRight::BLACK_CASTLING);
 			}
-			if(move.moving_piece == W_ROOK){
-				if(move.from == SQ_A1)
-					spec_mem.cr &= ~(CastlingRight::WHITE_OOO);
-				if(move.from == SQ_H1)
-					spec_mem.cr &= ~(CastlingRight::WHITE_OO);
-			}
-			if(move.moving_piece == B_ROOK){
-				if(move.from == SQ_A8)
-					spec_mem.cr &= ~(CastlingRight::BLACK_OOO);
-				if(move.from == SQ_H8)
-					spec_mem.cr &= ~(CastlingRight::BLACK_OO);
-			}
+		}
+	}
+	if(move.moving_piece == W_ROOK){
+		if(move.from == SQ_A1){
+			spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::WHITE_OOO)) ? global_zobrist_table.castling_values[1] : 0);
+			spec_mem.cr &= ~(CastlingRight::WHITE_OOO);
+		}
+		if(move.from == SQ_H1){
+			spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::WHITE_OO)) ? global_zobrist_table.castling_values[0] : 0);
+			spec_mem.cr &= ~(CastlingRight::WHITE_OO);
+			
+		}
+	}
+	if(move.moving_piece == B_ROOK){
+		if(move.from == SQ_A8){
+			spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::BLACK_OOO)) ? global_zobrist_table.castling_values[3] : 0);
+			spec_mem.cr &= ~(CastlingRight::BLACK_OOO);
+		}
+		if(move.from == SQ_H8){
+			spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::BLACK_OO)) ? global_zobrist_table.castling_values[2] : 0);
+			spec_mem.cr &= ~(CastlingRight::BLACK_OO);
 		}
 	}
 	if(check(at_move)){
@@ -341,6 +385,7 @@ bool Position::apply_move_checked(const complete_move& move){
 		this->get(move.moving_piece) ^= xor_mask;return false;
 	}
 	at_move = ~at_move;
+	spec_mem.since_capture++;
 	return true;
 }
 bool Position::under_attack_for(Color c, Square s)const{
@@ -516,18 +561,8 @@ float* bit_to_float_ptr(float* dest, const Bitboard bits){
 	});
 	return dest + 64;
 }
-Bitboard flipVertical(Bitboard x) {
-    return  ( (x << 56)                           ) |
-            ( (x << 40) & (0x00ff000000000000ULL) ) |
-            ( (x << 24) & (0x0000ff0000000000ULL) ) |
-            ( (x <<  8) & (0x000000ff00000000ULL) ) |
-            ( (x >>  8) & (0x00000000ff000000ULL) ) |
-            ( (x >> 24) & (0x0000000000ff0000ULL) ) |
-            ( (x >> 40) & (0x000000000000ff00ULL) ) |
-            ( (x >> 56) );
-}
 
-Eigen::VectorXf Position::to_one_hot_repr()const{
+/*Eigen::VectorXf Position::to_one_hot_repr()const{
 	Eigen::VectorXf ret(832);
 	float* data = ret.data();
 	
@@ -566,4 +601,4 @@ Eigen::VectorXf Position::to_one_hot_repr()const{
 		std::terminate();
 	}
 	return ret;
-}
+}*/

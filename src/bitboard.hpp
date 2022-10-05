@@ -279,7 +279,7 @@ inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {
 template<Color c>
 Bitboard pawn_attacks(Square s, Bitboard occ, Bitboard their, Square en_passant){
   Bitboard ret = 0;
-  Bitboard ep_bb = Bitboard(1) << en_passant;
+  Bitboard ep_bb = en_passant == SQ_NONE ? Bitboard(0) : (Bitboard(1) << en_passant);
   Bitboard square_board = Bitboard(1) << s;
   Bitboard up = shift<c == WHITE ? NORTH : SOUTH>(square_board);
   up &= ~occ;
@@ -392,7 +392,16 @@ inline Square pop_lsb(Bitboard* b) {
   *b &= *b - 1;
   return s;
 }
-
+inline Bitboard flipVertical(Bitboard x) {
+    return  ( (x << 56)                           ) |
+            ( (x << 40) & (0x00ff000000000000ULL) ) |
+            ( (x << 24) & (0x0000ff0000000000ULL) ) |
+            ( (x <<  8) & (0x000000ff00000000ULL) ) |
+            ( (x >>  8) & (0x00000000ff000000ULL) ) |
+            ( (x >> 24) & (0x0000000000ff0000ULL) ) |
+            ( (x >> 40) & (0x000000000000ff00ULL) ) |
+            ( (x >> 56) );
+}
 
 /// frontmost_sq() and backmost_sq() return the most/least advanced square in
 /// the given bitboard relative to the given color.
