@@ -520,6 +520,16 @@ stackvector<complete_move, 256> Position::generate_legal(Color c)const{
 	}
 	return ret;
 }
+std::vector<Position> Position::generate_all_successors()const{
+	std::vector<Position> ret;
+	auto leg = generate_legal(at_move);
+	ret.reserve(leg.size());
+	for(auto& move : leg){
+		ret.push_back(*this);
+		ret.back().apply_move_checked(move);
+	}
+	return ret;
+}
 std::string Position::fen()const{
 	int empty = 0;
 	std::stringstream sstr;

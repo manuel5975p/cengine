@@ -134,15 +134,15 @@ constexpr Bitboard  B_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED = (1ULL << 61) | (1UL
 /// rank_bb() and file_bb() return a bitboard representing all the squares on
 /// the given file or rank.
 
-inline Bitboard rank_bb(Rank r) {
-  return Rank1BB << (8 * r);
+constexpr inline Bitboard rank_bb(Rank r) {
+  return Bitboard(255) << (8 * r);
 }
 
 inline Bitboard rank_bb(Square s) {
   return rank_bb(rank_of(s));
 }
 
-inline Bitboard file_bb(File f) {
+constexpr inline Bitboard file_bb(File f) {
   return FileABB << f;
 }
 

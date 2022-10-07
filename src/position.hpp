@@ -111,6 +111,7 @@ struct Position{
 	std::string to_string()const;
 	stackvector<complete_move, 256> generate_trivial(Color c)const;
 	stackvector<complete_move, 256> generate_legal(Color c)const;
+	std::vector<Position> generate_all_successors()const;
 	//Eigen::VectorXf to_one_hot_repr()const;
 	bool check(Color c)const;
 	bool under_attack_for(Color c, Square s)const;

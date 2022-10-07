@@ -53,6 +53,7 @@ int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
         auto it = state.map.find(pos.quickhash());
         if(std::get<0>(it->second) >= depth){
             //std::cout << "hashhit " << depth << std::endl;
+            //std::cout << "immediately out: " << std::get<1>(it->second) << ", depth: " << depth << ", computed depth: " << std::get<0>(it->second) << std::endl;
             return std::get<1>(it->second);
         }
         else{
@@ -108,7 +109,7 @@ int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
                 int wert = -negamax(pclone, depth - 1, -beta, -maxWert, state);
                 //pos.revert_move_checked(move);
                 if(depth == state.depth){
-                    std::cout << move.to_string() << ": " << wert << "\n"; 
+                    //std::cout << move.to_string() << ": " << wert << "\n"; 
                 }
                 if (wert > maxWert) {
                     maxWert = wert;
@@ -122,6 +123,12 @@ int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
         }
         else
             return evaluate(pos);
+    }
+    else if(depth == 2){
+        int score = negamax(pos, 0, alpha, beta, state);
+        if(score < -500 || score < beta){
+            return score;
+        }
     }
     int maxWert = alpha;
     std::vector<std::pair<complete_move, int>> guesses(Zugliste.size());
@@ -140,7 +147,8 @@ int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
             wert = -evaluate(pclone);
         guesses[i] = std::make_pair(Zugliste[i], wert);
         if(hash_hit_but_shallower){
-            if(Zugliste[i].from == previous_best_move >> 8 && Zugliste[i].to == previous_best_move & 255){
+            if(Zugliste[i].from == previous_best_move >> 8 && Zugliste[i].to == (previous_best_move & 255)){
+                //std::cout << "katoff" << std::endl;
                 guesses[i].second += 1000;
             }
         }
@@ -148,26 +156,36 @@ int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
     std::sort(guesses.begin(), guesses.end(), [](const std::pair<complete_move, int>& a1, const std::pair<complete_move, int>& a2){
         return a1.second > a2.second;
     });
-
+    if (depth == state.depth){
+        state.bestmove = guesses[0].first;
+    }
+    size_t index(0);
+    complete_move local_best_move;
     for (auto& [move, wart] : guesses) {
+        ++index;
         Position pclone(pos);
         bool ch = pclone.apply_move_checked(move);
         if(!ch)std::terminate();
         int wert = -negamax(pclone, depth - 1, -beta, -maxWert, state);
         //pos.revert_move_checked(move);
         if(depth == state.depth){
-            std::cout << move.to_string() << ": " << wert << "\n"; 
+            //std::cout << move.to_string() << ": " << wert << "\n"; 
         }
         if (wert > maxWert) {
+            local_best_move = move;
             maxWert = wert;
             if (depth == state.depth){
                 state.bestmove = move;
             }
             if (maxWert >= beta){
+                //std::cout << "katoff " << index << " / " << guesses.size() << std::endl;
                 state.map[pos.quickhash()] = std::make_tuple(depth, maxWert, short(move.from) << 8 | short(move.to));
                 return maxWert;
             }
         }
+    }
+    if(maxWert > alpha){
+        state.map[pos.quickhash()] = std::make_tuple(depth, maxWert, short(local_best_move.from) << 8 | short(local_best_move.to));
     }
     return maxWert;
 }
