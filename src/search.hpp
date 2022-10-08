@@ -126,7 +126,7 @@ int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
     }
     else if(depth == 2){
         int score = negamax(pos, 0, alpha, beta, state);
-        if(score < -500 || score < beta){
+        if(score < -500 || score > beta){
             return score;
         }
     }
@@ -189,3 +189,4 @@ int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
     }
     return maxWert;
 }
+int negamax_multithreaded(Position& pos, int depth, const volatile int* alpha, const volatile int* beta, search_state& state);

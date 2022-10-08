@@ -80,7 +80,8 @@ template <typename T, std::size_t _max_size> struct stackvector {
   constexpr T* data() noexcept { return m_data; }
 
   constexpr bool empty() const noexcept { return size() == 0; }
-  
+  T& back()noexcept{assert(size());return m_data[size() - 1];}
+  const T& back()const noexcept{assert(size());return m_data[size() - 1];}
   T& operator[](size_type i) noexcept{assert(i < size());return m_data[i];}
   const T& operator[](size_type i)const noexcept{assert(i < size());return m_data[i];}
 private:

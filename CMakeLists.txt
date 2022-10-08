@@ -35,7 +35,8 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS True)
 file(GLOB cengine_src "src/*.hpp" "src/*.cpp")
-
+list(REMOVE_ITEM cengine_src "${CMAKE_CURRENT_SOURCE_DIR}/src/thread_pool_test.cpp")
+#message("${cengine_src}")
 try_compile(POPCNT "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/checks/popcount_support.cpp" COMPILE_DEFINITIONS -march=native)
 set(BMI_MACROS "")
 if(POPCNT)
@@ -55,7 +56,8 @@ else()
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -pedantic -fopenmp -fsanitize=undefined -fsanitize=address -D_GLIBCXX_DEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wall -Wextra -pedantic -march=native -flto -s -fomit-frame-pointer -fopenmp")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wall -Wextra -pedantic -march=native -fopenmp")
 
 add_executable(cengine ${cengine_src})
+add_executable(tptest "src/thread_pool.cpp" "src/thread_pool_test.cpp" "src/bitboard.cpp" "src/position.cpp")
 target_link_libraries(cengine gomp)
