@@ -61,3 +61,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wall -Wex
 add_executable(cengine ${cengine_src})
 add_executable(tptest "src/thread_pool.cpp" "src/thread_pool_test.cpp" "src/bitboard.cpp" "src/position.cpp")
 target_link_libraries(cengine gomp)
+add_custom_target( FinalMessage ALL
+    ${CMAKE_COMMAND} -E cmake_echo_color --cyan "Building ${CMAKE_BUILD_TYPE} is over!"
+    COMMENT "Final Message" )
+add_dependencies( FinalMessage cengine)

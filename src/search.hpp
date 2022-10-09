@@ -189,4 +189,4 @@ int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
     }
     return maxWert;
 }
-int negamax_multithreaded(Position& pos, int depth, const volatile int* alpha, const volatile int* beta, search_state& state);
+int negamax_multithreaded(Position& pos, int depth, int alpha, int beta, search_state& state);
