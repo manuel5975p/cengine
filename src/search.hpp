@@ -1,6 +1,5 @@
 #include "position.hpp"
 #include "evaluation.hpp"
-#include <omp.h>
 #include <vector>
 #include <tuple>
 #include <cstdint>

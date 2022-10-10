@@ -76,6 +76,7 @@ extern uint8_t SquareDistance[SQUARE_NB][SQUARE_NB];
 
 extern Bitboard SquareBB[SQUARE_NB];
 extern Bitboard LineBB[SQUARE_NB][SQUARE_NB];
+extern Bitboard LineBetween[SQUARE_NB][SQUARE_NB];
 extern Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
 extern Bitboard PawnAttacks[COLOR_NB][SQUARE_NB];
 
@@ -136,6 +137,13 @@ constexpr Bitboard  B_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED = (1ULL << 61) | (1UL
 
 constexpr inline Bitboard rank_bb(Rank r) {
   return Bitboard(255) << (8 * r);
+}
+template<Color c>
+constexpr inline Bitboard last_rank(){
+  if constexpr(c == WHITE){
+    return rank_bb(RANK_8);
+  }
+  return rank_bb(RANK_1);
 }
 
 inline Bitboard rank_bb(Square s) {

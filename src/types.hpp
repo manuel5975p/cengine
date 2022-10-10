@@ -527,7 +527,24 @@ constexpr static size_t compress_piece(Piece p){
 		case B_ROOK    :return 9 ;     break;
 		case B_QUEEN   :return 10;     break;
 		case B_KING    :return 11;     break;
-		default        :return -1;     break;
+		default        :return 12;     break;
+	}
+}
+constexpr static Piece unpack_piece_index(size_t p){
+	switch(p){
+		case 0   :return W_PAWN  ;     break;
+		case 1   :return W_KNIGHT;     break;
+		case 2   :return W_BISHOP;     break;
+		case 3   :return W_ROOK  ;     break;
+		case 4   :return W_QUEEN ;     break;
+		case 5   :return W_KING  ;     break;
+		case 6   :return B_PAWN  ;     break;
+		case 7   :return B_KNIGHT;     break;
+		case 8   :return B_BISHOP;     break;
+		case 9   :return B_ROOK  ;     break;
+		case 10  :return B_QUEEN ;     break;
+		case 11  :return B_KING  ;     break;
+		default        :return NO_PIECE;     break;
 	}
 }
 #endif // #ifndef TYPES_H_INCLUDED

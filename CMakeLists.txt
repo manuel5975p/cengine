@@ -55,13 +55,13 @@ else()
 	message("${Red}Doesn't support pext...${ColourReset}")
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -pedantic -fopenmp -fsanitize=undefined -fsanitize=address -D_GLIBCXX_DEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wall -Wextra -pedantic -march=native -fopenmp")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-c++11-narrowing -march=native -fsanitize=undefined -fsanitize=address -D_GLIBCXX_DEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wno-c++11-narrowing -march=native")
 
 add_executable(cengine ${cengine_src})
 add_executable(tptest "src/thread_pool.cpp" "src/thread_pool_test.cpp" "src/bitboard.cpp" "src/position.cpp")
-target_link_libraries(cengine gomp)
+#target_link_libraries(cengine gomp)
 add_custom_target( FinalMessage ALL
     ${CMAKE_COMMAND} -E cmake_echo_color --cyan "Building ${CMAKE_BUILD_TYPE} is over!"
     COMMENT "Final Message" )
-add_dependencies( FinalMessage cengine)
+add_dependencies(FinalMessage cengine tptest)

@@ -555,7 +555,25 @@ std::string Position::fen()const{
 			empty = 0;
 		}
 	}
-	return sstr.str() + (at_move == WHITE ? " w " : " b ") + "KQkq - 0 1";
+	std::string castlingstring;
+	if(spec_mem.cr == NO_CASTLING){
+		castlingstring = "-";
+	}
+	else{
+		if(spec_mem.cr & WHITE_OO){
+			castlingstring += "K";
+		}
+		if(spec_mem.cr & WHITE_OOO){
+			castlingstring += "Q";
+		}
+		if(spec_mem.cr & BLACK_OO){
+			castlingstring += "k";
+		}
+		if(spec_mem.cr & BLACK_OOO){
+			castlingstring += "q";
+		}
+	}
+	return sstr.str() + (at_move == WHITE ? " w " : " b ") + castlingstring + " - 0 1";
 }
 float* bit_to_float_ptr(float* dest, const Bitboard bits){
 	size_t rank = 7;

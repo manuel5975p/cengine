@@ -75,4 +75,43 @@ struct complete_move {
         return square_to_string(from) + square_to_string(to);
     }
 };
+struct turbomove{
+    unsigned short index1, index2;
+    unsigned int flags;
+    Bitboard bb1, bb2;
+    /*turbomove(unsigned short i1, unsigned short i2, unsigned int f, Bitboard b1, Bitboard b2)
+    : index1(i1),
+    index2(i2),
+    flags(f),
+    bb1(b1),
+    bb2(b2)
+    {
+        if()
+    }*/
+    std::string to_short_notation()const{
+        std::string str;
+        //if(flags & 1){
+        //    str += "Castling: ";
+        //}
+        
+        Bitboard moving = bb1;
+        for(;moving; moving = (moving & (moving - 1))){
+            Square sq = lsb(moving);
+            str += square_to_string(sq);
+        }
+        if((flags >> 1) & 1){
+            std::swap(str[0], str[2]);
+            std::swap(str[1], str[3]);
+        }
+        if(7 & (flags >> 2)){
+            switch(7 & (flags >> 2)){
+                case 1:str += 'q';break;
+                case 2:str += 'r';break;
+                case 3:str += 'b';break;
+                case 4:str += 'n';break;
+            }
+        }
+        return str;
+    }
+};
 #endif
