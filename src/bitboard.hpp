@@ -128,8 +128,10 @@ inline bool opposite_colors(Square s1, Square s2) {
   return bool(DarkSquares & s1) != bool(DarkSquares & s2);
 }
 constexpr Bitboard W_QUEENSIDE_CASTLING_EMPTYNESS_REQUIRED = (1 << 1) | (1 << 2) | (1 << 3);
+constexpr Bitboard W_QUEENSIDE_CASTLING_NOCHECKS_REQUIRED = (1 << 2) | (1 << 3);
 constexpr Bitboard  W_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED = (1 << 5) | (1 << 6);
 constexpr Bitboard B_QUEENSIDE_CASTLING_EMPTYNESS_REQUIRED = (1ULL << 57) | (1ULL << 58) | (1ULL << 59);
+constexpr Bitboard B_QUEENSIDE_CASTLING_NOCHECKS_REQUIRED = (1ULL << 58) | (1ULL << 59);
 constexpr Bitboard  B_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED = (1ULL << 61) | (1ULL << 62);
 
 /// rank_bb() and file_bb() return a bitboard representing all the squares on
@@ -400,7 +402,7 @@ inline Square pop_lsb(Bitboard* b) {
   *b &= *b - 1;
   return s;
 }
-inline Bitboard flipVertical(Bitboard x) {
+inline constexpr Bitboard flipVertical(Bitboard x) {
     return  ( (x << 56)                           ) |
             ( (x << 40) & (0x00ff000000000000ULL) ) |
             ( (x << 24) & (0x0000ff0000000000ULL) ) |

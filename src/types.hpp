@@ -235,13 +235,30 @@ constexpr inline PieceType get_type(Piece p){
     case W_BISHOP: return BISHOP; break;
     case W_QUEEN: return QUEEN; break;
     case W_KING: return KING; break;
-	case B_PAWN: return PAWN; break;
+	  case B_PAWN: return PAWN; break;
     case B_ROOK: return ROOK; break;
     case B_KNIGHT: return KNIGHT; break;
     case B_BISHOP: return BISHOP; break;
     case B_QUEEN: return QUEEN; break;
     case B_KING: return KING; break;
     default: assert(false && ("INVALID_PIECE")); return NO_PIECE_TYPE; break;
+  }
+}
+constexpr inline Color get_color(Piece p){
+  switch(p){
+    case W_PAWN: return WHITE; break;
+    case W_ROOK: return WHITE; break;
+    case W_KNIGHT: return WHITE; break;
+    case W_BISHOP: return WHITE; break;
+    case W_QUEEN: return WHITE; break;
+    case W_KING: return WHITE; break;
+	  case B_PAWN: return BLACK; break;
+    case B_ROOK: return BLACK; break;
+    case B_KNIGHT: return BLACK; break;
+    case B_BISHOP: return BLACK; break;
+    case B_QUEEN: return BLACK; break;
+    case B_KING: return BLACK; break;
+    default: assert(false && ("INVALID_PIECE")); return WHITE; break;
   }
 }
 constexpr inline Color opp(Color c){
@@ -400,7 +417,7 @@ constexpr Color operator~(Color c) {
 }
 
 constexpr Square operator~(Square s) {
-  return Square(s ^ SQ_A8); // Vertical flip SQ_A1 -> SQ_A8
+  return Square(int(s) ^ int(SQ_A8)); // Vertical flip SQ_A1 -> SQ_A8
 }
 
 constexpr File operator~(File f) {
@@ -500,20 +517,20 @@ constexpr Move make(Square from, Square to, PieceType pt = KNIGHT) {
 constexpr bool is_ok(Move m) {
   return from_sq(m) != to_sq(m); // Catch MOVE_NULL and MOVE_NONE
 }
-template<Piece p> constexpr size_t compress_piece()  {return -1;}
-template<> constexpr size_t compress_piece<W_PAWN>  (){return 0;}
-template<> constexpr size_t compress_piece<W_KNIGHT>  (){return 1;}
-template<> constexpr size_t compress_piece<W_BISHOP>(){return 2;}
-template<> constexpr size_t compress_piece<W_ROOK>(){return 3;}
-template<> constexpr size_t compress_piece<W_QUEEN> (){return 4;}
-template<> constexpr size_t compress_piece<W_KING>  (){return 5;}
-template<> constexpr size_t compress_piece<B_PAWN>  (){return 6;}
-template<> constexpr size_t compress_piece<B_KNIGHT>  (){return 7;}
-template<> constexpr size_t compress_piece<B_BISHOP>(){return 8;}
-template<> constexpr size_t compress_piece<B_ROOK>(){return 9;}
-template<> constexpr size_t compress_piece<B_QUEEN> (){return 10;}
-template<> constexpr size_t compress_piece<B_KING>  (){return 11;}
-constexpr static size_t compress_piece(Piece p){
+template<Piece p> constexpr uint16_t compress_piece()  {return -1;}
+template<> constexpr uint16_t compress_piece<W_PAWN>  (){return 0;}
+template<> constexpr uint16_t compress_piece<W_KNIGHT>  (){return 1;}
+template<> constexpr uint16_t compress_piece<W_BISHOP>(){return 2;}
+template<> constexpr uint16_t compress_piece<W_ROOK>(){return 3;}
+template<> constexpr uint16_t compress_piece<W_QUEEN> (){return 4;}
+template<> constexpr uint16_t compress_piece<W_KING>  (){return 5;}
+template<> constexpr uint16_t compress_piece<B_PAWN>  (){return 6;}
+template<> constexpr uint16_t compress_piece<B_KNIGHT>  (){return 7;}
+template<> constexpr uint16_t compress_piece<B_BISHOP>(){return 8;}
+template<> constexpr uint16_t compress_piece<B_ROOK>(){return 9;}
+template<> constexpr uint16_t compress_piece<B_QUEEN> (){return 10;}
+template<> constexpr uint16_t compress_piece<B_KING>  (){return 11;}
+constexpr static uint16_t compress_piece(Piece p){
 	switch(p){
 		case W_PAWN    :return 0 ;     break;
 		case W_KNIGHT  :return 1 ;     break;

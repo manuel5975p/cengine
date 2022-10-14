@@ -5,11 +5,13 @@
 #include <cmath>
 #include <chrono>
 #include <memory>
+#include <iterator>
 #include <set>
 #include <mutex>
 #include "search.hpp"
-cb::ThreadPool pool(24);
+//cb::ThreadPool pool(24);
 std::mutex abmutex;
+
 struct position_tree_node{
     Position p;
     int alpha;
@@ -79,23 +81,147 @@ struct position_tree_node{
         }
     }
 };
-int negamax_serial(Position& pos, int depth, int alpha, int beta){
-    int maxWert = alpha;
-    auto legal = pos.generate_legal(pos.at_move);
-    if(depth == 0){
-        return evaluate(pos);
+int qsearch(Position& pos, int depth, int alpha, int beta, turbo_search_state& state){
+    auto iter = state.map.find(pos.quickhash());
+    //if(iter != state.map.end()){
+    //    return std::get<1>(iter->second);
+    //}
+    state.count++;
+    int stand_pat = evaluate(pos);
+    if( stand_pat >= beta || depth < -8){
+        //state.map[pos.quickhash()] = std::make_tuple(depth, stand_pat, 0);
+        return stand_pat;
     }
-    for (size_t i = 0;i < legal.size();i++) {
-        Position pclone(pos);
-        pclone.apply_move_checked(legal[i]);
-        int wert = -negamax_serial(pclone, depth - 1, -beta, -maxWert);
+    if( alpha < stand_pat )
+        alpha = stand_pat;
+    constexpr int value[] = {1,3,3,5,8};
+    auto loud = pos.generate_loud(pos.at_move);
+    sort_based_on(loud.begin(), loud.end(),[&](const turbomove& tm){
+        if(tm.bb2 && tm.index2 < 12){
+            return value[tm.index2 % 6] - value[tm.index1 % 6];
+        }
+        return 0;
+    });
+    for(auto& mv : loud){
+        special_members backup = pos.spec_mem;
+        pos.apply_move(mv);
+        int wert = -qsearch(pos, depth - 1, -beta, -alpha, state);
+        pos.undo_move(mv);
+        pos.spec_mem = backup;
+        if(wert >= beta){
+            //state.map[pos.quickhash()] = std::make_tuple(depth, wert, 0);
+            return wert;
+
+        }
+        if(wert > alpha)
+            alpha = wert;
+    }
+    //state.map[pos.quickhash()] = std::make_tuple(depth, alpha, 0);
+    return alpha;
+}
+int negamax_serial(Position& pos, int depth, int alpha, int beta, turbo_search_state& state){
+    int maxWert = alpha;
+    
+    stackvector<turbomove, 256> legal;
+    //auto mapit = state.map.find(pos.quickhash());
+    short last_cutoff_move = 0;
+    //if(mapit != state.map.end()){
+    //    const auto& [entry_depth, entry_value, entry_shortmove] = mapit->second;
+    //    if(entry_depth >= depth){
+    //        return entry_value;
+    //    }
+    //    last_cutoff_move = std::get<2>(mapit->second);
+    //}
+    state.count++;
+    if(depth <= 0){
+        /*legal = pos.generate_new(pos.at_move);
+        if(legal.size() == 0){
+            if(pos.check(pos.at_move)){
+                return -1234567;
+            }
+            return 0;
+        }*/
+        return qsearch(pos, depth, alpha, beta, state);
+    }
+    
+    if(depth > 0){
+        legal = pos.generate_new(pos.at_move);
+        if(legal.size() == 0){
+            if(pos.check(pos.at_move)){
+                return -1234567;
+            }
+            return 0;
+        }
+    }
+    if(depth >= 3){
+        sort_based_on(legal.begin(), legal.end(), [&pos, beta, alpha, maxWert, depth, &state, last_cutoff_move](const turbomove& tm){
+            //if(last_cutoff_move){
+            //    Square starting_square = Square(last_cutoff_move & 63);
+            //    Square  ending_square =  Square((last_cutoff_move >> 8) & 63);
+            //    if(tm.bb1 & (1ull << starting_square)){
+            //        if(tm.bb1 & (1ull << ending_square)){
+            //            return 10000;
+            //        }
+            //    }
+            //}
+            int eval;
+            special_members backup = pos.spec_mem;
+            pos.apply_move(tm);
+            //auto cit = state.map.find(pos.quickhash());
+            //if(cit != state.map.end()){
+            //    eval = -std::get<1>(cit->second);
+            //}
+            //else
+                eval = -evaluate(pos);
+            pos.undo_move(tm);
+            pos.spec_mem = backup;
+            return eval;
+        });
+    }
+    else if(depth >= 1){
+        
+        sort_based_on(legal.begin(), legal.end(), [](const turbomove& tm){
+            constexpr int value[] = {1,3,3,5,8};
+            if(tm.bb2 && tm.index2 < 12){
+                return 3 + value[tm.index2 % 6] - value[tm.index1 % 6];
+            }
+            return 0;
+        });
+    }
+    size_t i = 0;
+    turbomove cbest = legal[0];
+    //int static_eval = evaluate(pos);
+    //if(static_eval < alpha){
+    //    depth -= (alpha - static_eval) / 50;
+    //}
+    for (i = 0;i < legal.size();i++) {
+        special_members backup = pos.spec_mem;
+        pos.apply_move(legal[i]);
+        int wert = -negamax_serial(pos, depth - 1, -beta, -maxWert, state);
+        pos.undo_move(legal[i]);
+        pos.spec_mem = backup;
         if (wert > maxWert) {
+            cbest = legal[i];
             maxWert = wert;
+            if(depth == state.depth){
+                state.bestmove = legal[i];
+            }
             if (maxWert >= beta){
-                return maxWert;
+                break;
             }
         }
     }
+    //if(state.depth - depth == 2)
+    //if(i == legal.size()){
+    //    std::cout << beta - alpha << "\n";
+    //}
+    //std::cout << "Cutoff " << i << " / " << legal.size() << "\n";
+    Square from = lsb(cbest.bb1);
+    Square to   = lsb(_blsr_u64(cbest.bb1));
+    if((cbest.flags >> 1) & 1){
+        std::swap(from, to);
+    }
+    //state.map[pos.quickhash()] = std::make_tuple(depth, maxWert, short(int(int(from) << 8) | int(to)));
     return maxWert;
 }
 int negamax_multithreaded(Position& pos, int depth, int alpha, int beta, search_state& state){
@@ -112,7 +238,7 @@ std::unique_ptr<position_tree_node> build_tree(Position p, int depth, int alpha,
     for(size_t i = 0;i < legal.size();i++){
         Position pclone(p);
         pclone.apply_move_checked(legal[i]);
-        guesses[i] = {legal[i], negamax_serial(pclone, 1, alpha, beta)};
+        //guesses[i] = {legal[i], negamax_serial(pclone, 1, alpha, beta)};
     }
     std::sort(guesses.begin(), guesses.end(), [](const std::pair<complete_move, int>& a, const std::pair<complete_move, int>& b){
         return a.second > b.second;
@@ -144,12 +270,13 @@ void negamax_node(position_tree_node* node){
     }
     const Position& pos = node->p;
     auto legal = pos.generate_legal(pos.at_move);
-    int depth = 3;
+    int depth = 4;
     for (size_t i = 0;i < legal.size();i++) {
         Position pclone(pos);
         pclone.apply_move_checked(legal[i]);
         if(node->alpha >= node->beta)break;
-        int wert = -negamax_serial(pclone, depth - 1, -node->beta, -node->alpha);
+        //int wert = -negamax_serial(pclone, depth - 1, -node->beta, -node->alpha);
+        int wert = 0;
         if(node->pruned)return;
         if (wert > node->alpha) {
             //node->alpha = wert;
@@ -163,7 +290,9 @@ void negamax_node(position_tree_node* node){
     //std::cout << pos.to_string() << std::endl;
     node->parent->raise_alpha_from_below(-node->alpha);
 }
-uint64_t perft(Position& p, int depth, bool verbose = false){
+template<bool print>
+uint64_t perft(Position& p, int depth){
+    
     stackvector<turbomove, 256> moves;
     if(p.at_move == WHITE){
         moves = p.generate_new<WHITE>();
@@ -171,77 +300,110 @@ uint64_t perft(Position& p, int depth, bool verbose = false){
     if(p.at_move == BLACK){
         moves = p.generate_new<BLACK>();
     }
-    //auto leg = p.generate_legal(p.at_move);
-    /*if(leg.size() != moves.size()){
-        
-        //std::cout << p.to_string() << "\n";
-        //std::cout << p.fen() << "\n";
-        //std::set<std::string> missing;
-        //for(auto& turbo : leg){
-        //    missing.insert(turbo.to_short_notation());
-        //}
-        //for(auto& turbo : moves){
-        //    missing.erase(turbo.to_short_notation());
-        //}
-        //std::cout << *missing.begin() << "\n";
-    }*/
     if(depth == 1){
-    //    if(verbose){
-    //        for(auto& mv : moves){
-    //            //std::cout << mv.to_short_notation() << "\n";
-    //        }
-    //    }
+        if constexpr(print){
+            for(auto& mv : moves)
+                std::cout << mv.to_short_notation() << ": " << 1 << std::endl;
+        }
         return moves.size();
     }
-    
     uint64_t accum = 0;
-    for(auto& mv : moves){
-        special_members backup = p.spec_mem;
-        bool lverbose = verbose;
-        //if(mv.to_short_notation() == "f3e5"){
-        //    print(pclone.get<B_PAWN>());
-        //}
-        p.apply_move(mv);
-        //std::cout << mv.to_short_notation() << "\n";
-        //if(mv.to_short_notation() == "a5b6"){
-            //lverbose = true;
-            //std::cout << mv.index1 << ' ' << mv.index2 << std::endl;
-            //std::cout << bb_to_string(mv.bb1) << bb_to_string(mv.bb2) << std::endl;
-            //std::cout << pclone.spec_mem.ep << "\n";
-            //std::cout << pclone.fen() << "\n";
-        //}
-        uint64_t ps = perft(p, depth - 1, lverbose);
-        p.undo_move(mv);
-        p.spec_mem = backup;
-        accum += ps;
-        //if(depth == 6 || verbose){
-        //    std::cout << mv.to_short_notation() << ": " << ps << std::endl;
-        //}
+    if constexpr(print){
+        //#pragma omp parallel for schedule(guided)
+        for(auto& mv : moves){
+            special_members backup = p.spec_mem;
+            Position pclone(p);
+            pclone.apply_move(mv);
+            uint64_t ps = perft<false>(pclone, depth - 1);
+            accum += ps;
+            std::cout << mv.to_short_notation() << ": " << ps << std::endl;
+        }
+    }
+    else{
+        for(auto& mv : moves){
+            special_members backup = p.spec_mem;
+            Position backupo(p);
+            p.apply_move(mv);
+            uint64_t ps = perft<false>(p, depth - 1);
+            p.undo_move(mv);
+            p.spec_mem = backup;
+            accum += ps;
+        }
     }
     return accum;
 }
-int main() {
+uint64_t perft(Position& p, int depth){
+    return perft<true>(p, depth);
+}
+int maiin(){
     Bitboards::init();
-    Position p;//("rnbqkbnr/p1pppppp/1p6/8/8/P3P3/1PPP1PPP/RNBQK2R w KQkq - 0 1");
-    std::cout << p.fen() << "\n";
-    std::cout << perft(p, 6) << "\n";
-    return 0;
-    //print(LineBetween[0][36]);
-    auto pmoves = p.generate_new<BLACK>();
-    for(auto& move : pmoves){
-        std::cout << move.to_short_notation() << "\n";
+    Position shitass("rnb1kb1r/1p1p1pp1/pqp5/4p2p/4P1K1/2N5/PPP2PPP/R1BQ1BNR w kq h6 0 1");
+    std::cout << shitass.spec_mem.ep << "\n";
+    auto shitloud = shitass.generate_new<WHITE>();
+    for(auto& mv : shitloud){
+        std::cout << mv.to_short_notation() << "\n";
     }
+    //return 0;
+    Position p;//("rnb1kbnr/pp1p1ppp/1qp5/4p3/4P3/8/PPP1KPPP/RNBQ1BNR b kq - 1 2");
+    turbo_search_state rs;
+    rs.count = 0;
+    rs.depth = 2;
+    int salpha = -100000, sbeta = 100000;
+    int64_t turboval = negamax_serial(p, rs.depth, salpha, sbeta, rs);
+    rs.count = 0;
+    rs.depth = 4;
+    turboval = negamax_serial(p, rs.depth, salpha, sbeta, rs);
+    rs.count = 0;
+    rs.depth = 6;
+    turboval = negamax_serial(p, rs.depth, salpha, sbeta, rs);
+    rs.count = 0;
+    rs.depth = 8;
+    turboval = negamax_serial(p, rs.depth, salpha, sbeta, rs);
+    std::cout << "turboval: " << turboval << std::endl;
+    std::cout << rs.bestmove.to_short_notation() << "\n";
+    std::cout << rs.count << " nodes\n";
     return 0;
+}
+int main2() {
+    Bitboards::init();
+    Position p("3r1rk1/pp4b1/2p4p/2q3p1/4B1bN/2P5/PPQ5/2K1R2R w - - 0 1");
+    //std::cout << p.fen() << "\n";
+    //std::cout << perft(p, 6) << "\n";
+    //return 0;
+    ////print(LineBetween[0][36]);
+    //auto pmoves = p.generate_loud<WHITE>();
+    //for(auto& move : pmoves){
+    //    std::cout << move.to_short_notation() << "\n";
+    //}
+    //return 0;
     search_state state;
     state.count = 0;
-    state.depth = 2;
+    state.depth = 4;
     int salpha = -100000, sbeta = 100000;
+    turbo_search_state rs;
+    rs.count = 0;
+    rs.depth = 6;
+    bool flag = true;
+    std::thread fr([&rs, &flag]{
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        while(flag){
+            std::cout << std::to_string(rs.count) + "\n";
+            std::cout.flush();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    });
     auto t1 = _bm_nanoTime();
-    int realval = negamax_serial(p, 5, salpha, sbeta);
+    int turboval = negamax_serial(p, rs.depth, salpha, sbeta, rs);
+    int convval = negamax(p, rs.depth, salpha, sbeta, state);
     auto t2 = _bm_nanoTime();
-    std::cout << "Akchual value: " << realval << std::endl;
+    flag = false;
+    std::cout << "convval: " << convval << std::endl;
+    std::cout << "turboval: " << turboval << std::endl;
     std::cout << "Time required: " << (t2 - t1) / 1000 / 1000.0 << " ms" << std::endl;
-    
+    std::cout << rs.bestmove.to_short_notation() << "\n";
+    std::cout << rs.count << " nodes\n";
+    fr.join();
+    return 0;
     std::vector<position_tree_node*> leaves;
     auto up = build_tree(p, state.depth, salpha, sbeta, leaves);
     //xoshiro_256 gen;

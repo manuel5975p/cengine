@@ -10,6 +10,7 @@ struct complete_move {
     Piece captured_piece;
     Square from;
     Square to;
+    Piece promoted_to;
     complete_move(Square _from, Square _to, Piece mp, Piece cp) : moving_piece(mp), captured_piece(cp),  from(_from), to(_to) {
         //assert(from != to && "Move goes to the same square");
     }
@@ -36,7 +37,7 @@ struct complete_move {
         }
     }
     complete_move(const std::array<Bitboard, 12>& pos, const std::string& movestr){
-        assert(movestr.size() == 4);
+        assert(movestr.size() == 4 || movestr.size() == 5);
         Square from = string_to_square(movestr.substr(0,2));
         Square to = string_to_square(movestr.substr(2,4));
         Bitboard fromm = (1ULL << from);
@@ -57,6 +58,11 @@ struct complete_move {
                 captured_piece = p;
                 break;
             }
+        }
+        if(movestr.size() == 5){
+            Piece wp = charPiece(movestr.back());
+            PieceType pt = get_type(wp);
+            promoted_to = make_piece(get_color(moving_piece), pt);
         }
     }
     bool operator==(const complete_move& o)const{

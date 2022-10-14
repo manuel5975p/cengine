@@ -1,3 +1,5 @@
+#ifndef SEARCH_HPP
+#define SEARCH_HPP
 #include "position.hpp"
 #include "evaluation.hpp"
 #include <vector>
@@ -37,8 +39,16 @@ struct search_state{
 
     }
 };
+struct turbo_search_state{
+    int depth;
+    std::unordered_map<hash_int, std::tuple<int, int, short>> map; //Depth, value, bestmove
+    turbomove bestmove;
+    uint64_t count;
+    turbo_search_state() : map(1 << 20), count(0){
 
-int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
+    }
+};
+static int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
     state.count++;
     
     if(pos.spec_mem.since_capture >= 50){std::cout << "abort eval" << std::endl;return 0;}
@@ -189,3 +199,48 @@ int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
     return maxWert;
 }
 int negamax_multithreaded(Position& pos, int depth, int alpha, int beta, search_state& state);
+int negamax_serial(Position& pos, int depth, int alpha, int beta, turbo_search_state& state);
+uint64_t perft(Position& p, int depth);
+inline int qsearch_naive(Position& pos, int depth, turbo_search_state& state){
+    state.count++;
+    int maxWert = evaluate(pos);
+    constexpr int value[] = {1,3,3,5,8};
+    auto loud = pos.generate_loud(pos.at_move);
+    /*sort_based_on(loud.begin(), loud.end(),[&](const turbomove& tm){
+        if(tm.bb2 && tm.index2 < 12){
+            return value[tm.index2 % 6] - value[tm.index1 % 6];
+        }
+        return 0;
+    });*/
+    for(auto& mv : loud){
+        special_members backup = pos.spec_mem;
+        pos.apply_move(mv);
+        int wert = -qsearch_naive(pos, depth - 1, state);
+        pos.undo_move(mv);
+        pos.spec_mem = backup;
+        if(wert > maxWert)
+            maxWert = wert;
+    }
+    return maxWert;
+}
+inline int negamax_naive(Position& pos, int depth, turbo_search_state& state){
+    state.count++;
+    if(depth == 0)return evaluate(pos);
+    int maxWert = -10000000;
+    auto legal = pos.generate_new(pos.at_move);
+    for (size_t i = 0;i < legal.size();i++) {
+        special_members backup = pos.spec_mem;
+        pos.apply_move(legal[i]);
+        int wert = -negamax_naive(pos, depth - 1, state);
+        pos.undo_move(legal[i]);
+        pos.spec_mem = backup;
+        if (wert > maxWert) {
+            maxWert = wert;
+            if(depth == state.depth){
+                state.bestmove = legal[i];
+            }
+        }
+    }
+    return maxWert;
+}
+#endif

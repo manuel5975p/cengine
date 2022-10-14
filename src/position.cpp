@@ -287,8 +287,8 @@ bool Position::apply_move_checked(const complete_move& move){
 			Bitboard bb = Bitboard(1) << move.to;
 			get(move.moving_piece) &= ~bb;
 			spec_mem.hash ^= global_zobrist_table.values[compress_piece(move.moving_piece)][int(move.to)];
-			spec_mem.hash ^= global_zobrist_table.values[compress_piece(make_piece(at_move, QUEEN))][int(move.to)];
-			get(at_move, QUEEN) |= bb;
+			spec_mem.hash ^= global_zobrist_table.values[compress_piece(move.promoted_to)][int(move.to)];
+			get(move.promoted_to) |= bb;
 		}
 		if(std::abs(int(move.to) - int(move.from)) == 16){
 			this->spec_mem.ep = Square((int(move.to) + int(move.from)) / 2);
@@ -357,27 +357,27 @@ bool Position::apply_move_checked(const complete_move& move){
 			}
 		}
 	}
-	if(move.moving_piece == W_ROOK){
-		if(move.from == SQ_A1){
+	//if(move.moving_piece == W_ROOK){
+		if(move.to == SQ_A1 || move.from == SQ_A1){
 			spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::WHITE_OOO)) ? global_zobrist_table.castling_values[1] : 0);
 			spec_mem.cr &= ~(CastlingRight::WHITE_OOO);
 		}
-		if(move.from == SQ_H1){
+		if(move.to == SQ_H1 || move.from == SQ_H1){
 			spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::WHITE_OO)) ? global_zobrist_table.castling_values[0] : 0);
 			spec_mem.cr &= ~(CastlingRight::WHITE_OO);
 			
 		}
-	}
-	if(move.moving_piece == B_ROOK){
-		if(move.from == SQ_A8){
+	//}
+	//if(move.moving_piece == B_ROOK){
+		if(move.to == SQ_A8 || move.from == SQ_A8){
 			spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::BLACK_OOO)) ? global_zobrist_table.castling_values[3] : 0);
 			spec_mem.cr &= ~(CastlingRight::BLACK_OOO);
 		}
-		if(move.from == SQ_H8){
+		if(move.to == SQ_H8 || move.from == SQ_H8){
 			spec_mem.hash ^= ((spec_mem.cr & (CastlingRight::BLACK_OO)) ? global_zobrist_table.castling_values[2] : 0);
 			spec_mem.cr &= ~(CastlingRight::BLACK_OO);
 		}
-	}
+	//}
 	if(check(at_move)){
 		if(move.captured_piece != NO_PIECE){
 			this->get(move.captured_piece) |= (1ULL << move.to);
@@ -573,7 +573,8 @@ std::string Position::fen()const{
 			castlingstring += "q";
 		}
 	}
-	return sstr.str() + (at_move == WHITE ? " w " : " b ") + castlingstring + " - 0 1";
+	std::string epstring = spec_mem.ep == SQ_NONE ? "-" : square_to_string(spec_mem.ep);
+	return sstr.str() + (at_move == WHITE ? " w " : " b ") + castlingstring + " " + epstring +  " 0 1";
 }
 float* bit_to_float_ptr(float* dest, const Bitboard bits){
 	size_t rank = 7;
@@ -589,7 +590,442 @@ float* bit_to_float_ptr(float* dest, const Bitboard bits){
 	});
 	return dest + 64;
 }
+template<Color we>
+stackvector<turbomove, 256> Position::generate_loud()const{
+		stackvector<turbomove, 256> moves;
+		Bitboard pinlines[64];
+		std::fill(pinlines, pinlines + 64, ~0ull);
+		Bitboard checklines = 0;
+		constexpr Color them = ~we;
+		unsigned checkcount = 0;
+		Bitboard our_king_bitboard = piece_boards[compress_piece(make_piece(we, KING))];
+		Square our_king_square = lsb(piece_boards[compress_piece(make_piece(we, KING))]);
+		Square their_king_square = lsb(piece_boards[compress_piece(make_piece(them, KING))]);
+		Bitboard our_pieces = get(we);
+		Bitboard their_pieces = get(them);
+		Bitboard occ = our_pieces | their_pieces;
+		Bitboard occ_for_pseudo = occ ^ (1ull << our_king_square);
+		Bitboard their_pseudo = 0;
+		for(PieceType x : {BISHOP, ROOK, QUEEN, KNIGHT, KING}){
+			Bitboard enemy_occ = get(them, x);
+			Bitloop(enemy_occ){
+				Square enemy_square = lsb(enemy_occ);
+				Bitboard attacks = attacks_bb(x, enemy_square, occ_for_pseudo);
+				their_pseudo |= attacks;
+			}
+		}
+		their_pseudo |= pawn_attacks_bb<them>(get(them, PAWN));
 
+		Piece piece_map[64] = {NO_PIECE};
+		for(auto& pi : pieces){
+			Bitboard pib = get(pi);
+			while(pib){
+				Square x = lsb(pib);
+				piece_map[x] = pi;
+				pib ^= (1ULL << x);
+			}
+		}
+		for(PieceType x : {BISHOP, ROOK, QUEEN}){
+			Piece enemy_slider = make_piece(them, x);
+			Bitboard es_bb = get(enemy_slider);
+			Bitloop(es_bb){
+				Square single_square = lsb(es_bb);
+				Bitboard attackline = 0;
+				if(our_king_bitboard & PseudoAttacks[x][single_square])
+					attackline = (LineBetween[single_square][our_king_square] & (1ull << single_square | PseudoAttacks[x][single_square]));
+				//if(attackline){
+				//	print(attackline);
+				//}
+				/*if(LineBetween[single_square][our_king_square]){
+					attackline |= (1ull << single_square);
+				}*/
+				if((attackline & (their_pieces & ~_blsi_u64(es_bb))) == 0){
+					if(popcount(attackline & our_pieces) == 1){
+						pinlines[lsb(attackline & our_pieces)] ^= ~attackline;
+						pinlines[lsb(attackline & our_pieces)] |= (1ull << single_square);
+					}
+					if(attackline && popcount(attackline & our_pieces) == 0){
+						checklines |= attackline;
+						checklines |= (1ull << single_square);
+						checkcount++;
+					}
+				}
+			}
+		}
+		Bitboard their_king_backward_pseudos[6] = {0};
+		their_king_backward_pseudos[1] = pawn_attacks_bb<~we>(1ull << their_king_square);
+		for(int x = 2; x < 6;x++){
+			their_king_backward_pseudos[x] = attacks_bb(PieceType(x), their_king_square, occ);
+		}
+		checkcount += popcount(attacks_bb(KNIGHT, our_king_square, occ) & get(them, KNIGHT));
+		checklines |= (attacks_bb(KNIGHT, our_king_square, occ) & get(them, KNIGHT));
+		checkcount += popcount(pawn_attacks_bb<we>(1ull << our_king_square) & get(them, PAWN));
+		checklines |= pawn_attacks_bb<we>(1ull << our_king_square) & get(them, PAWN);
+		//print(checklines);
+		//std::cout << checkcount << " checks\n";
+		Bitboard checkmask_for_normal_figures;
+		Bitboard loudness_mask = their_pieces;
+		if(checkcount == 0)checkmask_for_normal_figures = ~0ull;
+		else if(checkcount == 1){loudness_mask = ~(Bitboard(0));checkmask_for_normal_figures = checklines;}
+		else if(checkcount == 2){loudness_mask = ~(Bitboard(0));checkmask_for_normal_figures = 0;}
+		Bitboard checkmask_for_pawns = checkmask_for_normal_figures;
+		
+		//std::cout << our_king_square << "\n";
+		if(pawn_attacks_bb<we>(1ull << our_king_square) & get(them, PAWN)){
+			if(spec_mem.ep != SQ_NONE)
+				checkmask_for_pawns |= square_bb(spec_mem.ep);
+		}
+		for(PieceType pt : piece_types){
+			Piece ourpiece = make_piece(we, pt);
+			Bitboard our_pieces_ofthis = get(ourpiece);
+			if(checkcount >= 2 && pt != KING)continue;
+			if(pt == PAWN){
+				Bitloop(our_pieces_ofthis){
+					const Bitboard our_piece_single = _blsi_u64(our_pieces_ofthis);
+					const Square our_piece_square = lsb(our_pieces_ofthis);
+					Bitboard attacks = pawn_attacks<we>(our_piece_square, occ, their_pieces, spec_mem.ep);
+					attacks &= (pinlines[our_piece_square]);
+					attacks &= (checkmask_for_pawns & (loudness_mask | their_king_backward_pseudos[pt]));
+					attacks &= ~last_rank<we>();
+					Bitloop(attacks){
+						Bitboard singleattack = _blsi_u64(attacks);
+						Bitboard their_piece_clearance = singleattack;
+						Piece their_klonked_piece = NO_PIECE;
+						if(their_piece_clearance & their_pieces){
+							their_klonked_piece = piece_map[lsb(their_piece_clearance)];
+						}
+						else if(spec_mem.ep != SQ_NONE && !!(singleattack & (1ull << spec_mem.ep))){
+							their_piece_clearance = shift<we == WHITE ? SOUTH : NORTH>(their_piece_clearance);
+							//print(their_piece_clearance);
+							their_klonked_piece = make_piece(~we, PAWN);
+						}
+						else{
+							their_piece_clearance = 0;
+						}
+						moves.push_back(turbomove{(uint16_t)(compress_piece(ourpiece)), (uint16_t)(compress_piece(their_klonked_piece)), 0, our_piece_single | singleattack, their_klonked_piece == NO_PIECE ? 0 : their_piece_clearance});
+						if(int(lsb(singleattack)) < int(our_piece_square)){
+							moves.back().flags |= (1 << 1);
+						}
+					}
+				}
+			}
+			else if(pt == BISHOP || pt == ROOK || pt == QUEEN || pt == KNIGHT){
+				Bitloop(our_pieces_ofthis){
+					const Bitboard our_piece_single = _blsi_u64(our_pieces_ofthis);
+					const Square our_piece_square = lsb(our_pieces_ofthis);
+					Bitboard attacks = attacks_bb(pt, our_piece_square, occ);
+					attacks &= ~our_pieces;
+					attacks &= (pinlines[our_piece_square]);
+					attacks &= (checkmask_for_normal_figures & (loudness_mask | their_king_backward_pseudos[pt]));
+					if(pt == ROOK && our_piece_square == SQ_H1){
+						//print(attacks);
+					}
+					Bitloop(attacks){
+						Bitboard singleattack = _blsi_u64(attacks);
+						int castling_klonk = 0;
+						if constexpr(we == WHITE){
+							castling_klonk |= (Bitboard(our_piece_square == SQ_H1 ? 1 : 0) << 5);
+							castling_klonk |= (Bitboard(our_piece_square == SQ_A1 ? 1 : 0) << 6);
+						}
+						else{
+							castling_klonk |= (Bitboard(our_piece_square == SQ_H8 ? 1 : 0) << 5);
+							castling_klonk |= (Bitboard(our_piece_square == SQ_A8 ? 1 : 0) << 6);
+						}
+						moves.push_back(turbomove{uint16_t(compress_piece(ourpiece)), uint16_t(compress_piece(piece_map[lsb(attacks)])), castling_klonk, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack});
+						if(int(lsb(singleattack)) < int(our_piece_square)){
+							moves.back().flags |= (1 << 1);
+						}
+					}
+				}
+			}
+			else /*if(checkcount)*/{
+				Bitboard attacks = PseudoAttacks[KING][our_king_square];
+				const Bitboard our_piece_single = 1ull << our_king_square;
+				attacks &= ~our_pieces;
+				attacks &= ~their_pseudo;
+				attacks &= loudness_mask;
+				Bitloop(attacks){
+					Bitboard singleattack = _blsi_u64(attacks);
+					moves.push_back(turbomove{short(compress_piece(ourpiece)), short(compress_piece(piece_map[lsb(attacks)])), 0, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack});
+					if(int(lsb(singleattack)) < int(our_king_square)){
+						moves.back().flags |= (1 << 1);
+					}
+				}
+			}
+		}
+		if(checkcount >= 2) return moves;
+		return moves;
+	}
+	
+	
+	template<Color we>
+	stackvector<turbomove, 256> Position::generate_new()const{
+		stackvector<turbomove, 256> moves;
+		Bitboard pinlines[64];
+		std::fill(pinlines, pinlines + 64, ~0ull);
+		Bitboard checklines = 0;
+		constexpr Color them = ~we;
+		unsigned checkcount = 0;
+		Bitboard our_king_bitboard = piece_boards[compress_piece(make_piece(we, KING))];
+		Square our_king_square = lsb(piece_boards[compress_piece(make_piece(we, KING))]);
+		Bitboard our_pieces = get(we);
+		Bitboard their_pieces = get(them);
+		Bitboard occ = our_pieces | their_pieces;
+		Bitboard occ_for_pseudo = occ ^ (1ull << our_king_square);
+		Bitboard their_pseudo = 0;
+		for(PieceType x : {BISHOP, ROOK, QUEEN, KNIGHT, KING}){
+			Bitboard enemy_occ = get(them, x);
+			Bitloop(enemy_occ){
+				Square enemy_square = lsb(enemy_occ);
+				Bitboard attacks = attacks_bb(x, enemy_square, occ_for_pseudo);
+				their_pseudo |= attacks;
+			}
+		}
+		their_pseudo |= pawn_attacks_bb<them>(get(them, PAWN));
+
+		Piece piece_map[64] = {NO_PIECE};
+		for(auto& pi : pieces){
+			Bitboard pib = get(pi);
+			while(pib){
+				Square x = lsb(pib);
+				piece_map[x] = pi;
+				pib ^= (1ULL << x);
+			}
+		}
+		for(PieceType x : {BISHOP, ROOK, QUEEN}){
+			Piece enemy_slider = make_piece(them, x);
+			Bitboard es_bb = get(enemy_slider);
+			Bitloop(es_bb){
+				Square single_square = lsb(es_bb);
+				Bitboard attackline = 0;
+				if(our_king_bitboard & PseudoAttacks[x][single_square])
+					attackline = (LineBetween[single_square][our_king_square] & (1ull << single_square | PseudoAttacks[x][single_square]));
+				//if(attackline){
+				//	print(attackline);
+				//}
+				/*if(LineBetween[single_square][our_king_square]){
+					attackline |= (1ull << single_square);
+				}*/
+				if((attackline & (their_pieces & ~_blsi_u64(es_bb))) == 0){
+					if(popcount(attackline & our_pieces) == 1){
+						pinlines[lsb(attackline & our_pieces)] ^= ~attackline;
+						pinlines[lsb(attackline & our_pieces)] |= (1ull << single_square);
+					}
+					if(attackline && popcount(attackline & our_pieces) == 0){
+						checklines |= attackline;
+						checklines |= (1ull << single_square);
+						checkcount++;
+					}
+				}
+			}
+		}
+		
+		checkcount += popcount(attacks_bb(KNIGHT, our_king_square, occ) & get(them, KNIGHT));
+		checklines |= (attacks_bb(KNIGHT, our_king_square, occ) & get(them, KNIGHT));
+		checkcount += popcount(pawn_attacks_bb<we>(1ull << our_king_square) & get(them, PAWN));
+		checklines |= pawn_attacks_bb<we>(1ull << our_king_square) & get(them, PAWN);
+		//print(checklines);
+		//std::cout << checkcount << "\n";
+		Bitboard checkmask_for_normal_figures;
+
+		if(checkcount == 0)checkmask_for_normal_figures = ~0ull;
+		else if(checkcount == 1){checkmask_for_normal_figures = checklines;}
+		else if(checkcount == 2)checkmask_for_normal_figures = 0;
+		Bitboard checkmask_for_pawns = checkmask_for_normal_figures;
+		//std::cout << our_king_square << "\n";
+		if(pawn_attacks_bb<we>(1ull << our_king_square) & get(them, PAWN)){
+			if(spec_mem.ep != SQ_NONE)
+				checkmask_for_pawns |= square_bb(spec_mem.ep);
+		}
+		for(PieceType pt : piece_types){
+			Piece ourpiece = make_piece(we, pt);
+			Bitboard our_pieces_ofthis = get(ourpiece);
+			if(checkcount >= 2 && pt != KING)continue;
+			if(pt == PAWN){
+				Bitloop(our_pieces_ofthis){
+					const Bitboard our_piece_single = _blsi_u64(our_pieces_ofthis);
+					const Square our_piece_square = lsb(our_pieces_ofthis);
+					Bitboard attacks = pawn_attacks<we>(our_piece_square, occ, their_pieces, spec_mem.ep);
+					attacks &= (pinlines[our_piece_square]);
+					attacks &= checkmask_for_pawns;
+					attacks &= ~last_rank<we>();
+					Bitloop(attacks){
+						Bitboard singleattack = _blsi_u64(attacks);
+						Bitboard their_piece_clearance = singleattack;
+						Piece their_klonked_piece = NO_PIECE;
+						if(their_piece_clearance & their_pieces){
+							their_klonked_piece = piece_map[lsb(their_piece_clearance)];
+						}
+						else if(spec_mem.ep != SQ_NONE && !!(singleattack & (1ull << spec_mem.ep))){
+							their_piece_clearance = shift<we == WHITE ? SOUTH : NORTH>(their_piece_clearance);
+							//print(their_piece_clearance);
+							their_klonked_piece = make_piece(~we, PAWN);
+						}
+						else{
+							their_piece_clearance = 0;
+						}
+						moves.push_back(turbomove{(unsigned short)(compress_piece(ourpiece)), (unsigned short)(compress_piece(their_klonked_piece)), 0, our_piece_single | singleattack, their_klonked_piece == NO_PIECE ? 0 : their_piece_clearance});
+						if(int(lsb(singleattack)) < int(our_piece_square)){
+							moves.back().flags |= (1 << 1);
+						}
+					}
+				}
+			}
+			else if(pt == BISHOP || pt == ROOK || pt == QUEEN || pt == KNIGHT){
+				Bitloop(our_pieces_ofthis){
+					const Bitboard our_piece_single = _blsi_u64(our_pieces_ofthis);
+					const Square our_piece_square = lsb(our_pieces_ofthis);
+					Bitboard attacks = attacks_bb(pt, our_piece_square, occ);
+					attacks &= ~our_pieces;
+					attacks &= (pinlines[our_piece_square]);
+					
+					attacks &= checkmask_for_normal_figures;
+					if(pt == ROOK && our_piece_square == SQ_H1){
+						//print(attacks);
+					}
+					Bitloop(attacks){
+						Bitboard singleattack = _blsi_u64(attacks);
+						int castling_klonk = 0;
+						if constexpr(we == WHITE){
+							castling_klonk |= (Bitboard(our_piece_square == SQ_H1 ? 1 : 0) << 5);
+							castling_klonk |= (Bitboard(our_piece_square == SQ_A1 ? 1 : 0) << 6);
+						}
+						else{
+							castling_klonk |= (Bitboard(our_piece_square == SQ_H8 ? 1 : 0) << 5);
+							castling_klonk |= (Bitboard(our_piece_square == SQ_A8 ? 1 : 0) << 6);
+						}
+						moves.push_back(turbomove{short(compress_piece(ourpiece)), short(compress_piece(piece_map[lsb(attacks)])), castling_klonk, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack});
+						if(int(lsb(singleattack)) < int(our_piece_square)){
+							moves.back().flags |= (1 << 1);
+						}
+					}
+				}
+			}
+			else{
+				Bitboard attacks = PseudoAttacks[KING][our_king_square];
+				const Bitboard our_piece_single = 1ull << our_king_square;
+				attacks &= ~our_pieces;
+				attacks &= ~their_pseudo;
+				Bitloop(attacks){
+					Bitboard singleattack = _blsi_u64(attacks);
+					moves.push_back(turbomove{short(compress_piece(ourpiece)), short(compress_piece(piece_map[lsb(attacks)])), 0, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack});
+					if(int(lsb(singleattack)) < int(our_king_square)){
+						moves.back().flags |= (1 << 1);
+					}
+				}
+			}
+		}
+		if(checkcount >= 2) return moves;
+		if constexpr(we == WHITE){
+			if((spec_mem.cr & WHITE_OO) && (W_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED & occ) == 0){
+				if((their_pseudo & (W_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED | our_king_bitboard)) == 0){
+					moves.push_back(
+						turbomove{
+							compress_piece<W_KING>(),
+							compress_piece<W_ROOK>(),
+							1 | 3 << 5,
+							(1ull << 4 | 1ull << 6),
+							(1ull << 5 | 1ull << 7)
+						}
+					);
+				}
+			}
+			if((spec_mem.cr & WHITE_OOO) && (W_QUEENSIDE_CASTLING_EMPTYNESS_REQUIRED & occ) == 0){
+				if((their_pseudo & (W_QUEENSIDE_CASTLING_NOCHECKS_REQUIRED | our_king_bitboard)) == 0){
+					moves.push_back(
+						turbomove{
+							short(compress_piece<W_KING>()),
+							short(compress_piece<W_ROOK>()),
+							3 | 3 << 5,
+							(1ull << 4 | 1ull << 2),
+							(1ull << 0 | 1ull << 3)
+						}
+					);
+				}
+			}
+		}
+		else{
+			if((spec_mem.cr & BLACK_OO) && (B_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED & occ) == 0){
+				if((their_pseudo & (B_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED | our_king_bitboard)) == 0){
+					moves.push_back(
+						turbomove{
+							short(compress_piece<B_KING>()),
+							short(compress_piece<B_ROOK>()),
+							1 | 3 << 5,
+							(1ull << 60 | 1ull << 62),
+							(1ull << 63 | 1ull << 61)
+						}
+					);
+				}
+			}
+			if((spec_mem.cr & BLACK_OOO) && (B_QUEENSIDE_CASTLING_EMPTYNESS_REQUIRED & occ) == 0){
+				if((their_pseudo & (B_QUEENSIDE_CASTLING_NOCHECKS_REQUIRED | our_king_bitboard)) == 0){
+					moves.push_back(
+						turbomove{
+							short(compress_piece<B_KING>()),
+							short(compress_piece<B_ROOK>()),
+							3 | 3 << 5,
+							(1ull << 60 | 1ull << 58),
+							(1ull << 56 | 1ull << 59)
+						}
+					);
+				}
+			}
+		}
+
+
+		//PROMOTIONS
+
+
+		Piece ourpawn = make_piece(we, PAWN);
+		Bitboard ourpawns = get(ourpawn);
+		if((we == WHITE && (ourpawns & rank_bb(RANK_7))) || (we == BLACK && (ourpawns & rank_bb(RANK_2))))
+		Bitloop(ourpawns){
+			int reverse_bit = ((we == BLACK) ? 2 : 0);
+			const Bitboard our_piece_single = _blsi_u64(ourpawns);
+			const Square our_piece_square = lsb(ourpawns);
+			Bitboard attacks = pawn_attacks<we>(our_piece_square, occ, their_pieces, spec_mem.ep);
+			attacks &= (pinlines[our_piece_square]);
+			attacks &= checkmask_for_normal_figures;
+			attacks &= last_rank<we>();
+			Bitloop(attacks){
+				Bitboard singleattack = _blsi_u64(attacks);
+				moves.push_back(
+				turbomove{
+					compress_piece(ourpawn),
+					compress_piece(piece_map[lsb(attacks)]),
+					1 << 2 | reverse_bit,
+					our_piece_single | singleattack,
+					piece_map[lsb(attacks)] == NO_PIECE ? 0 : attacks
+				});
+				moves.push_back(
+				turbomove{
+					compress_piece(ourpawn),
+					compress_piece(piece_map[lsb(attacks)]),
+					2 << 2 | reverse_bit,
+					our_piece_single | singleattack,
+					piece_map[lsb(attacks)] == NO_PIECE ? 0 : attacks
+				});
+				moves.push_back(
+				turbomove{
+					compress_piece(ourpawn),
+					compress_piece(piece_map[lsb(attacks)]),
+					3 << 2 | reverse_bit,
+					our_piece_single | singleattack,
+					piece_map[lsb(attacks)] == NO_PIECE ? 0 : attacks
+				});
+				moves.push_back(
+				turbomove{
+					compress_piece(ourpawn),
+					compress_piece(piece_map[lsb(attacks)]),
+					4 << 2 | reverse_bit,
+					our_piece_single | singleattack,
+					piece_map[lsb(attacks)] == NO_PIECE ? 0 : attacks
+				});
+			}
+		}
+		return moves;
+	}
 /*Eigen::VectorXf Position::to_one_hot_repr()const{
 	Eigen::VectorXf ret(832);
 	float* data = ret.data();
