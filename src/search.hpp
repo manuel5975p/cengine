@@ -200,6 +200,7 @@ static int negamax(Position& pos, int depth, int alpha, int beta, search_state& 
 }
 int negamax_multithreaded(Position& pos, int depth, int alpha, int beta, search_state& state);
 int negamax_serial(Position& pos, int depth, int alpha, int beta, turbo_search_state& state);
+int qsearch(Position& pos, int depth, int alpha, int beta, turbo_search_state& state);
 uint64_t perft(Position& p, int depth);
 inline int qsearch_naive(Position& pos, int depth, turbo_search_state& state){
     state.count++;

@@ -1066,3 +1066,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 	}
 	return ret;
 }*/
+template stackvector<turbomove, 256> Position::generate_loud<WHITE>()const;
+template stackvector<turbomove, 256> Position::generate_loud<BLACK>()const;
+template stackvector<turbomove, 256> Position::generate_new<WHITE>()const;
+template stackvector<turbomove, 256> Position::generate_new<BLACK>()const;

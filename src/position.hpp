@@ -152,6 +152,7 @@ struct Position{
 	stackvector<turbomove, 256> generate_loud()const;
 	template<Color we>
 	stackvector<turbomove, 256> generate_new()const;
+	
 	void apply_move(const turbomove& tm){
 		piece_boards[tm.index1] ^= tm.bb1;
 		if(tm.index2 < 12)
@@ -277,6 +278,10 @@ struct Position{
 		
 	}
 };
+extern template stackvector<turbomove, 256> Position::generate_loud<WHITE>()const;
+extern template stackvector<turbomove, 256> Position::generate_loud<BLACK>()const;
+extern template stackvector<turbomove, 256> Position::generate_new<WHITE>()const;
+extern template stackvector<turbomove, 256> Position::generate_new<BLACK>()const;
 template<typename iterator, typename func>
 void sort_based_on(iterator begin, iterator end, func f){
     using T = typename std::iterator_traits<iterator>::value_type;
