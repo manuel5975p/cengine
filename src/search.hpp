@@ -8,27 +8,123 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <algorithm>
-struct hash_move_pair{
-    hash_int phash;
-    complete_move c;
-    hash_move_pair() : phash(0), c(SQ_NONE, SQ_NONE, NO_PIECE, NO_PIECE){
+#include <sys/mman.h>
+extern bool interrupt_token;
+template<typename T>
+constexpr T empty_value(0);
+template<typename K, typename V>
+struct pairmemmap{
+    std::pair<K, V>* kvs;
+    std::size_t n_elems;
+    size_t m_size;
+    constexpr static unsigned probing_attempts = 4;
+    pairmemmap() : pairmemmap(1 << 21){}
+    pairmemmap(std::size_t size) : kvs(nullptr), n_elems(0){
+        m_size = size;
+        assert((m_size & (m_size - 1)) == 0 && "Size must be a power of two");
+        kvs = (std::pair<K, V>*)mmap(nullptr, m_size * sizeof(std::pair<K, V>), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+        clear();
+    }
+    struct iterator{
+        pairmemmap* ptr;
+        size_t true_index;
+        std::pair<K, V>* operator->()const noexcept{
+            return ptr->kvs + true_index;
+        }
+        std::pair<K, V>* operator*()const noexcept{
+            return *(this->operator->());
+        }
+        bool operator==(const iterator&) const = default;
+        bool operator!=(const iterator&) const = default;
+    };
+    iterator find(const K& key){
+        size_t hash = std::hash<K>{}(key);
+        size_t index = hash & (m_size - 1);
+        size_t attempts = 0;
+        while(attempts++ < probing_attempts){
+            if(kvs[index].first == key){
+                return iterator{this, index};
+            }
+            index = (index + 1) & (m_size - 1);
+        }
+        return end();
+    }
+    void insert(const std::pair<K, V>& kv){
+        //if(n_elems > (m_size / 4)){
+        //    resize(m_size * 2);
+        //}
+        size_t hash = std::hash<K>{}(kv.first);
+        size_t index = hash & (m_size - 1);
+        size_t attempts = 0;
+        
+        while(kvs[index].first != kv.first && kvs[index].first != empty_value<K> && attempts++ < probing_attempts){
+            index = (index + 1) & (m_size - 1);
+        }
+        if(kvs[index].first != kv.first && kvs[index].first != empty_value<K>){
+            std::cerr << "massive collision\n";
+        }
+        n_elems += kvs[index].first != empty_value<K>;
+        kvs[index] = kv;
+    }
+    void resize(size_t newsize){
+        assert((newsize & (newsize - 1)) == 0 && "Size must be a power of two");
+        std::pair<K, V>* newkvs = (std::pair<K, V>*)mmap(nullptr, newsize * sizeof(std::pair<K, V>), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+        for(size_t i = 0;i < newsize;i++){
+            newkvs[i].first = empty_value<K>;
+        }
+        
+        std::swap(kvs, newkvs);
+        std::swap(m_size, newsize);
+        n_elems = 0;
 
+        for(size_t i = 0;i < newsize;i++){
+            if(newkvs[i].first != empty_value<K>){
+                insert(newkvs[i]);
+            }
+        }
+        munmap(newkvs, newsize * sizeof(std::pair<K, V>));
+    }
+    void reserve(size_t n){
+        resize(n);
+    }
+    size_t size()const noexcept{
+        return n_elems;
+    }
+    pairmemmap operator=(const pairmemmap& o) = delete;
+    pairmemmap (const pairmemmap& o) = delete;
+    pairmemmap operator=(pairmemmap&& o){
+        kvs = o.kvs;
+        m_size = o.m_size;
+        n_elems = o.n_elems;
+        o.kvs = nullptr;
+    }
+    pairmemmap (pairmemmap&& o){
+        kvs = o.kvs;
+        m_size = o.m_size;
+        n_elems = o.n_elems;
+        o.kvs = nullptr;
+    }
+    ~pairmemmap(){
+        if(kvs)
+            munmap(kvs, m_size * sizeof(K));
+        kvs = nullptr;
+    }
+    iterator end(){
+        return iterator{this, ~size_t(0)};
+    }
+    
+    void clear(){
+        for(size_t i = 0;i < m_size;i++){
+            kvs[i].first = empty_value<K>;
+        }
     }
 };
-struct hash_map{
-    std::vector<hash_move_pair> data;
-    hash_map(size_t size_in_bytes) : data(size_in_bytes / sizeof(hash_move_pair)){
-        
-    }
-    hash_move_pair& operator[](const Position& pos){
-        size_t hash = pos.hash();
-        hash_move_pair& ref = data[hash % data.size()];
-        if(ref.c.from != SQ_NONE){
-            
-        }
-        //OOF case
-        return data[0];
-    }
+struct /*__attribute__((aligned(1), packed))*/ hash_entry{
+    int depth;
+    int value;
+    short bestmove;
+    Color at_move;
+    bool was_cut_off;
 };
 struct search_state{
     int depth;
@@ -41,12 +137,11 @@ struct search_state{
 };
 struct turbo_search_state{
     int depth;
-    std::unordered_map<hash_int, std::tuple<int, int, short>> map; //Depth, value, bestmove
+    //std::unordered_map<hash_int, std::tuple<int, int, short>> map; //Depth, value, bestmove
+    pairmemmap<hash_int, hash_entry> map;
     turbomove bestmove;
     uint64_t count;
-    turbo_search_state() : map(1 << 20), count(0){
-
-    }
+    turbo_search_state() : map(1 << 28), count(0){}
 };
 static int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
     state.count++;

@@ -31,6 +31,7 @@ Bitboard SquareBB[SQUARE_NB];
 Bitboard LineBB[SQUARE_NB][SQUARE_NB];
 Bitboard LineBetween[SQUARE_NB][SQUARE_NB];
 Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
+Bitboard KingTwoMoves[SQUARE_NB];
 Bitboard PawnAttacks[COLOR_NB][SQUARE_NB];
 
 Magic RookMagics[SQUARE_NB];
@@ -96,7 +97,15 @@ void Bitboards::init() {
                           PseudoAttacks[pt][s] |= to;
                   }
               }
-
+    for(int i = 0;i < 64;i++){
+        Square sq = (Square)i;
+        Bitboard empty = 0;
+        Bitboard ka = PseudoAttacks[KING][sq];
+        for(;ka; ka &= (ka - 1)){
+            empty |= PseudoAttacks[KING][lsb(ka)];
+        }
+        KingTwoMoves[sq] = empty;
+    }
   Direction RookDirections[] = { NORTH, EAST, SOUTH, WEST };
   Direction BishopDirections[] = { NORTH_EAST, SOUTH_EAST, SOUTH_WEST, NORTH_WEST };
 

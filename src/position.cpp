@@ -784,14 +784,15 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 		their_pseudo |= pawn_attacks_bb<them>(get(them, PAWN));
 
 		Piece piece_map[64] = {NO_PIECE};
-		for(auto& pi : pieces){
+		generate_piecemap(piece_map);
+		/*for(auto& pi : pieces){
 			Bitboard pib = get(pi);
 			while(pib){
 				Square x = lsb(pib);
 				piece_map[x] = pi;
-				pib ^= (1ULL << x);
+				pib = _blsr_u64(pib);
 			}
-		}
+		}*/
 		for(PieceType x : {BISHOP, ROOK, QUEEN}){
 			Piece enemy_slider = make_piece(them, x);
 			Bitboard es_bb = get(enemy_slider);
@@ -996,7 +997,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 					compress_piece(piece_map[lsb(attacks)]),
 					1 << 2 | reverse_bit,
 					our_piece_single | singleattack,
-					piece_map[lsb(attacks)] == NO_PIECE ? 0 : attacks
+					piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack
 				});
 				moves.push_back(
 				turbomove{
@@ -1004,7 +1005,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 					compress_piece(piece_map[lsb(attacks)]),
 					2 << 2 | reverse_bit,
 					our_piece_single | singleattack,
-					piece_map[lsb(attacks)] == NO_PIECE ? 0 : attacks
+					piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack
 				});
 				moves.push_back(
 				turbomove{
@@ -1012,7 +1013,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 					compress_piece(piece_map[lsb(attacks)]),
 					3 << 2 | reverse_bit,
 					our_piece_single | singleattack,
-					piece_map[lsb(attacks)] == NO_PIECE ? 0 : attacks
+					piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack
 				});
 				moves.push_back(
 				turbomove{
@@ -1020,7 +1021,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 					compress_piece(piece_map[lsb(attacks)]),
 					4 << 2 | reverse_bit,
 					our_piece_single | singleattack,
-					piece_map[lsb(attacks)] == NO_PIECE ? 0 : attacks
+					piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack
 				});
 			}
 		}

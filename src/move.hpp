@@ -4,6 +4,7 @@
 #include "bitboard.hpp"
 #include "io.hpp"
 #include <string>
+#include <unordered_map>
 struct Position;
 struct complete_move {
     Piece moving_piece;
@@ -119,5 +120,28 @@ struct turbomove{
         }
         return str;
     }
+    short to_shortmove()const noexcept{
+        short ret = 0;
+        Square from = lsb(bb1);
+        Square to = lsb(bb1 & (bb1 - 1));
+        if((flags >> 1) & 1)std::swap(from, to);
+        ret = int(from) << 8 | int(to);
+        if(7 & (flags >> 2)){
+            ret |= (1 << 6);
+            ret |= (7 & (flags >> 2)) << 14;
+        }
+        return ret;
+    }
+    bool operator==(const turbomove& other)const noexcept{
+        return bb1 == other.bb1;
+    }
 };
+namespace std{
+    template<>
+    struct hash<turbomove>{
+        size_t operator()(const turbomove& tm)const noexcept{
+            return tm.bb1;
+        }
+    };
+}
 #endif

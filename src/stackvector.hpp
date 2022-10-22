@@ -17,8 +17,14 @@ template <typename T, std::size_t _max_size> struct stackvector {
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
   stackvector() : m_size(0) {}
   void fill(const value_type &u) { std::fill_n(begin(), size(), u); }
-  void push_back(const value_type &v) { m_data[m_size++] = v; }
-  void push_back(value_type &&v) { m_data[m_size++] = std::move(v); }
+  void push_back(const value_type &v) {
+	  assert(m_size < m_max_size);
+	  m_data[m_size++] = v; 
+  }
+  void push_back(value_type &&v) {
+	  assert(m_size < m_max_size);
+	  m_data[m_size++] = std::move(v);
+  }
   void pop_back() { m_data[--m_size].~T(); }
   void swap(stackvector &other) {
     std::swap_ranges(begin(), end(), other.begin());

@@ -10,6 +10,7 @@
 #include <fstream>
 #include <chrono>
 #include <sstream>
+#include <thread>
 uint64_t nanoTime(){
 	using namespace std;
 	using namespace std::chrono;
@@ -44,8 +45,19 @@ int misn(){
 	}
 	return 0;
 }
-int main(){
+int main2(){
 	Bitboards::init();
+	Position p;
+	auto legalgen = p.generate_coroutine<WHITE>();
+	while(legalgen.next()){
+		std::cout << legalgen.getValue().to_short_notation() << "\n";
+	}
+	return 0;
+}
+int main(){
+	//mlockall(MCL_FUTURE);
+	Bitboards::init();
+	//print(KingTwoMoves[SQ_A1]);
 	//std::ofstream whatwasinput("/home/manuel/cengine_log.txt", std::ios::app);
 	//whatwasinput << "\n\n=========================\n\n" << std::flush;
 	std::string str;
@@ -87,13 +99,17 @@ int main(){
 			}
 			p = Position(fen);
 			while(isstr >> token){
-				bool attempt = p.apply_move_checked(complete_move(p.piece_boards, token));
+				complete_move cm(p.piece_boards, token);
+				bool attempt = p.apply_move_checked(cm);
 				if(!attempt){
-					std::terminate();
+					std::cerr << "Invalid moves provided\n";
 				}
 			}
 			//std::cout << p.to_string() << "\n";
 			//std::cout << int(p.spec_mem.cr) << "\n";
+		}
+		if(command == "eval"){
+			std::cout << evaluate(p) << "\n";
 		}
 		else if(command == "go"){
 			std::string token;
@@ -106,30 +122,32 @@ int main(){
 				std::cout << perft(p, depth) << std::endl;
 				continue;
 			}
+			int sgor;
+			uint64_t nps;
 			int state = 0;
-			tstate.map.clear();
-			tstate.depth = 5;
-			tstate.count = 0;
+			//tstate.map.clear();
+			interrupt_token = false;
 			std::string bm;
-			auto nau = std::chrono::high_resolution_clock::now();
-			//int sgor = negamax_serial(p,  tstate.depth, -100000, 100000, tstate);
-			//uint64_t nps = (tstate.count * 1000000000ull) / (std::chrono::high_resolution_clock::now() - nau).count();
-			//bm = tstate.bestmove.to_short_notation();
-			//std::cout << "info depth " << tstate.depth << " seldepth " << tstate.depth + 10 << " multipv 1 score cp " << sgor << " nodes " << tstate.count << " nps " << nps << " hashfull 63 tbhits 0 time 101 pv " + bm << std::endl;
-			//tstate.depth = 7;
-			//tstate.count = 0;
-			//nau = std::chrono::high_resolution_clock::now();
-			//sgor = negamax_serial(p,  tstate.depth, -100000, 100000, tstate);
-			//nps = tstate.count * 1000000000 / (std::chrono::high_resolution_clock::now() - nau).count();
-			//bm = tstate.bestmove.to_short_notation();
-			//std::cout << "info depth " << tstate.depth << " seldepth " << tstate.depth + 10 << " multipv 1 score cp " << sgor << " nodes " << tstate.count << " nps " << nps << " hashfull 63 tbhits 0 time 101 pv " + bm << std::endl;
-			tstate.depth = 7;
-			tstate.count = 0;
-			nau = std::chrono::high_resolution_clock::now();
-			int sgor = negamax_serial(p,  tstate.depth, -100000, 100000, tstate);
-			uint64_t nps = tstate.count * 1000000000 / (std::chrono::high_resolution_clock::now() - nau).count();
-			bm = tstate.bestmove.to_short_notation();
-			std::cout << "info depth " << tstate.depth << " seldepth " << tstate.depth + 10 << " multipv 1 score cp " << sgor << " nodes " << tstate.count << " nps " << nps << " hashfull 63 tbhits 0 time 101 pv " + bm << std::endl;
+			std::thread searcher([&]{
+			for(int depth = 4;depth;depth++){
+				auto nau = std::chrono::high_resolution_clock::now();
+				tstate.depth = depth;
+				tstate.count = 0;
+				int tsgor = negamax_serial(p, tstate.depth, -100000, 100000, tstate);
+				
+				if(!interrupt_token){
+					sgor = tsgor;
+					bm = tstate.bestmove.to_short_notation();
+					std::cout << "Updated bestmove to " << bm << std::endl;
+					nps = (tstate.count * 1000000000ull) / (std::chrono::high_resolution_clock::now() - nau).count();
+					std::cout << "info depth " << tstate.depth << " seldepth " << tstate.depth + 10 << " multipv 1 score cp " << sgor << " nodes " << tstate.count << " nps " << nps << " hashfull " << tstate.map.n_elems * 1000ull / tstate.map.m_size << " tbhits 0 time 101 pv " + bm << std::endl;
+				}
+				if(interrupt_token)break;
+			}});
+			std::this_thread::sleep_for(std::chrono::seconds(20));
+			//std::cin.get();
+			interrupt_token = true;
+			searcher.join();
 			std::vector<complete_move> pv;
 			Position pvpos(p);
 			for(int useless = 0;useless < 100;useless++){
@@ -137,7 +155,8 @@ int main(){
 				if(it == tstate.map.end()){
 					break;
 				}
-				short sm = std::get<2>(it->second);
+				short sm = (it->second.bestmove);
+				std::cerr << square_to_string(Square(sm >> 8)) << square_to_string(Square(sm & 255)) << "\n";
 				if(!sm)break;
 				pv.push_back(complete_move(pvpos.piece_boards, Square(sm >> 8), Square(sm & 255)));
 				pvpos.apply_move_checked(pv.back());
@@ -147,9 +166,9 @@ int main(){
 				pvstring += cm.to_short_notation();
 				pvstring += ' ';
 			}
-			std::cout << "info depth " << tstate.depth << " seldepth " << tstate.depth + 10 << " multipv 1 score cp " << sgor << " nodes " << tstate.count << " nps " << nps << " hashfull 63 tbhits 0 time 101 pv " + pvstring << std::endl;
+			std::cout << "info depth " << tstate.depth << " seldepth " << tstate.depth + 10 << " multipv 1 score cp " << sgor << " nodes " << tstate.count << " nps " << nps << " hashfull " << tstate.map.n_elems * 1000ull / tstate.map.m_size << " tbhits 0 time 101 pv " + pvstring << std::endl;
 			std::cout << "bestmove ";
-			std::cout << tstate.bestmove.to_short_notation();
+			std::cout << bm;
 			std::cout << std::endl;
 		}
 		else if(command == "uci"){

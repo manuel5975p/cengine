@@ -24,9 +24,60 @@ constexpr positional_evaluator kings(40, 0, 1, 2, 6, 7);
 constexpr positional_evaluator rooks(-30, 0, 7);
 constexpr positional_evaluator knights_border(rank_bb(RANK_1) | rank_bb(RANK_8) | file_bb(FILE_A) | file_bb(FILE_H), -10);
 constexpr int passed_scores[8] = {0, 30, 40, 50, 70, 100, 200, 0};
+template<Piece pi>
+inline stackvector<Bitboard, 10> attacks_by_piece(const Position& pos, Bitboard occ){
+	stackvector<Bitboard, 10> ret;
+	Bitboard piece_occ = pos.get<pi>();
+	Bitloop(piece_occ){
+		Square sq = lsb(piece_occ);
+		Bitboard atks = attacks_bb<get_type(pi)>(sq, piece_occ);
+		ret.push_back(atks);
+	}
+	return ret;
+}
+template<Color we>
+int king_safety(const Position& pos, Bitboard occ){
+	constexpr Color them = ~we;
+	//Bitboard tknights = pos.get<make_piece(them, KNIGHT)>();
+	//Bitboard tbishops = pos.get<make_piece(them, BISHOP)>();
+	//Bitboard trooks = pos.get<make_piece  (them, ROOK)>();
+	//Bitboard tqueens = pos.get<make_piece (them, QUEEN)>();
+	Bitboard our_king_zone = KingTwoMoves[lsb(pos.get<make_piece(we, KING)>())];
+	Bitboard problematic_attacks = 0;
+	unsigned collisions = 0;
+	stackvector<Bitboard, 10> patks = attacks_by_piece<make_piece(them, KNIGHT)>(pos, occ);
+	size_t index = 0;
+	for(Bitboard atk : patks){
+		Bitboard problematic_slice = atk & our_king_zone;
+		//std::cout << patks.size() << "\n";
+		collisions += popcount(problematic_attacks & problematic_slice);
+		problematic_attacks |= problematic_slice;
+	}
+	patks = attacks_by_piece<make_piece(them, BISHOP)>(pos, occ);
+	for(Bitboard atk : patks){
+		Bitboard problematic_slice = atk & our_king_zone;
+		collisions += popcount(problematic_attacks & problematic_slice);
+		problematic_attacks |= problematic_slice;
+	}
+	patks = attacks_by_piece<make_piece(them, ROOK)>(pos, occ);
+	for(Bitboard atk : patks){
+		Bitboard problematic_slice = atk & our_king_zone;
+		collisions += popcount(problematic_attacks & problematic_slice);
+		problematic_attacks |= problematic_slice;
+	}
+	patks = attacks_by_piece<make_piece(them, QUEEN)>(pos, occ);
+	for(Bitboard atk : patks){
+		Bitboard problematic_slice = atk & our_king_zone;
+		collisions += popcount(problematic_attacks & problematic_slice);
+		problematic_attacks |= problematic_slice;
+	}
+	int atk_malus = popcount(problematic_attacks);
+	int multi_atk_malus = 10 * collisions;
+	//std::cout << atk_malus << "\n";
+	return -3 * multi_atk_malus;
+}
 int evaluate(const Position& pos){
     int popcnts[12];
-    
     Bitboard wocc = pos.get(WHITE);
     Bitboard bocc = pos.get(BLACK);
     Bitboard occ = wocc | bocc;
@@ -56,40 +107,41 @@ int evaluate(const Position& pos){
     //int brooks = rooks(flipVertical(pos.get<B_ROOK>()));
     w_minus_b_mat += wkings - bkings;
     //w_minus_b_mat += wrooks - brooks;
+    //return pos.at_move == WHITE ? w_minus_b_mat : -w_minus_b_mat;
+
     w_minus_b_mat += (popcount(pos.get<W_BISHOP>()) > 1 ? 40 : 0);
     w_minus_b_mat -= (popcount(pos.get<B_BISHOP>()) > 1 ? 40 : 0);
     biterator biter(0);
     int wmobbonus = 0;
     int bmobbonus = 0;
-    Bitboard w_kingfield = PseudoAttacks[KING][lsb(pos.get<W_KING>())];
-    Bitboard b_kingfield = PseudoAttacks[KING][lsb(pos.get<B_KING>())];
-
+    Bitboard w_kingfield = KingTwoMoves[lsb(pos.get<W_KING>())];
+    Bitboard b_kingfield = KingTwoMoves[lsb(pos.get<B_KING>())];
     biter = biterator(pos.get<W_ROOK>());
     while(*biter){
         Bitboard ataks = attacks_bb<ROOK>(lsb(*biter), occ);
-        wmobbonus += 2 * popcount(ataks);
-        wmobbonus += 20 * popcount(ataks & b_kingfield);
+        wmobbonus += popcount(ataks);
+        wmobbonus += 5 * popcount(ataks & b_kingfield);
         ++biter;
     }
     biter = biterator(pos.get<W_BISHOP>());
     while(*biter){
         Bitboard ataks = attacks_bb<BISHOP>(lsb(*biter), occ);
         wmobbonus += popcount(ataks);
-        wmobbonus += 20 * popcount(ataks & b_kingfield);
+        wmobbonus += 5 * popcount(ataks & b_kingfield);
         ++biter;
     }
     biter = biterator(pos.get<B_ROOK>());
     while(*biter){
         Bitboard ataks = attacks_bb<ROOK>(lsb(*biter), occ);
-        bmobbonus += 2 * popcount(ataks);
-        wmobbonus += 20 * popcount(ataks & w_kingfield);
+        bmobbonus += popcount(ataks);
+        wmobbonus += 5 * popcount(ataks & w_kingfield);
         ++biter;
     }
     biter = biterator(pos.get<B_BISHOP>());
     while(*biter){
         Bitboard ataks = attacks_bb<BISHOP>(lsb(*biter), occ);
         bmobbonus += popcount(ataks);
-        wmobbonus += 20 * popcount(ataks & w_kingfield);
+        wmobbonus += 5 * popcount(ataks & w_kingfield);
         ++biter;
     }
     w_minus_b_mat += (wmobbonus - bmobbonus) * 5;
@@ -108,11 +160,40 @@ int evaluate(const Position& pos){
         Bitboard passed_field = passed_pawn_span(BLACK, lsb(*biter));
         passed_field &= pos.get<W_PAWN>();
         if(passed_field == 0){
-            bpassed += passed_scores[8 - lsb(*biter) / 8];
+            bpassed += passed_scores[7 - lsb(*biter) / 8];
         }
         ++biter;
     }
+    int w_outposts = 0, b_outposts = 0;
+
+    Bitboard pc = pos.get<W_KNIGHT>();
+    Bitloop(pc){
+        Square psq = lsb(pc);
+        Bitboard passed_field = outpost_span(WHITE, psq);
+        if((passed_field & pos.get<B_PAWN>()) == 0){
+            w_outposts += 40;
+        }
+        Bitboard pseudos = PseudoAttacks[KNIGHT][psq];
+        pseudos &= ~(pawn_attacks_bb<BLACK>(pos.get<B_PAWN>()));
+        w_outposts += 5 * popcount(pseudos);
+    }
+    pc = pos.get<B_KNIGHT>();
+    Bitloop(pc){
+        Square psq = lsb(pc);
+        Bitboard passed_field = outpost_span(BLACK, psq);
+        if((passed_field & pos.get<W_PAWN>()) == 0){
+            b_outposts += 40;
+        }
+        Bitboard pseudos = PseudoAttacks[KNIGHT][psq];
+        pseudos &= ~(pawn_attacks_bb<WHITE>(pos.get<W_PAWN>()));
+        b_outposts += 5 * popcount(pseudos);
+    }
+	int w_kingsafety = king_safety<WHITE>(pos, occ);
+	int b_kingsafety = king_safety<BLACK>(pos, occ);
+
+    w_minus_b_mat += (w_kingsafety - b_kingsafety);
     w_minus_b_mat += (wpassed - bpassed);
+    w_minus_b_mat += (w_outposts - b_outposts);
     if(pos.at_move == BLACK)return -w_minus_b_mat;
     return w_minus_b_mat;
 }

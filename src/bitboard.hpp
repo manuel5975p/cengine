@@ -78,6 +78,7 @@ extern Bitboard SquareBB[SQUARE_NB];
 extern Bitboard LineBB[SQUARE_NB][SQUARE_NB];
 extern Bitboard LineBetween[SQUARE_NB][SQUARE_NB];
 extern Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
+extern Bitboard KingTwoMoves[SQUARE_NB];
 extern Bitboard PawnAttacks[COLOR_NB][SQUARE_NB];
 
 
@@ -245,6 +246,10 @@ inline Bitboard passed_pawn_span(Color c, Square s) {
   return forward_ranks_bb(c, s) & (adjacent_files_bb(file_of(s)) | file_bb(s));
 }
 
+inline Bitboard outpost_span(Color c, Square s) {
+  return forward_ranks_bb(c, s) & (adjacent_files_bb(file_of(s)));
+}
+
 
 /// aligned() returns true if the squares s1, s2 and s3 are aligned either on a
 /// straight or on a diagonal line.
@@ -330,12 +335,12 @@ inline int popcount(Bitboard b) {
 
 #if defined(__GNUC__)  // GCC, Clang, ICC
 
-inline Square lsb(Bitboard b) {
+inline constexpr Square lsb(Bitboard b) {
   assert(b);
   return Square(__builtin_ctzll(b));
 }
 
-inline Square msb(Bitboard b) {
+inline constexpr Square msb(Bitboard b) {
   assert(b);
   return Square(63 ^ __builtin_clzll(b));
 }
