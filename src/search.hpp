@@ -22,7 +22,7 @@ struct pairmemmap{
     pairmemmap(std::size_t size) : kvs(nullptr), n_elems(0){
         m_size = size;
         assert((m_size & (m_size - 1)) == 0 && "Size must be a power of two");
-        kvs = (std::pair<K, V>*)mmap(nullptr, m_size * sizeof(std::pair<K, V>), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+        kvs = (std::pair<K, V>*)mmap(nullptr, m_size * sizeof(std::pair<K, V>), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         clear();
     }
     struct iterator{
@@ -122,7 +122,7 @@ struct pairmemmap{
 struct /*__attribute__((aligned(1), packed))*/ hash_entry{
     int depth;
     int value;
-    short bestmove;
+    shortmove bestmove;
     Color at_move;
     bool was_cut_off;
 };

@@ -165,9 +165,9 @@ struct Position{
 			}
 		}
 	}
-	Bitboard pinmap(Square sq)const noexcept{
-
-	}
+	//Bitboard pinmap(Square sq)const noexcept{
+//
+	//}
 	hash_int hash()const{
 		hash_int h(0);
 		for(const auto& piece : pieces){
@@ -381,10 +381,10 @@ struct Position{
 			piece_boards[at_move == BLACK ? 6 : 0] ^= promotion_mask;
 		}
 	}
-	std::optional<turbomove> create_move(short short_move)const noexcept{
+	std::optional<turbomove> create_move(shortmove short_move)const noexcept{
 		turbomove ret;
-		Square from = Square((short_move >> 8) & 63);
-		Square to = Square(short_move & 63);
+		Square from = short_move.from();
+		Square to = short_move.to();
 		Square capture_square = to;
 		uint16_t moving = pieceindex_at(from);
 		Bitboard ep_bitboard = (spec_mem.ep == SQ_NONE ? 0 : (1ull << spec_mem.ep));
@@ -393,6 +393,11 @@ struct Position{
 		Bitboard ours = get(at_move);
 		Bitboard their = get(~at_move);
 		Bitboard occ = ours | their;
+		Bitboard from_to = (1ull << from) | (1ull << to);
+		constexpr Bitboard wk = (1ull << 4 | 1ull << 6);
+		constexpr Bitboard wq = (1ull << 4 | 1ull << 2);
+		constexpr Bitboard bk = (1ull << 60 | 1ull << 62);
+		constexpr Bitboard bq = (1ull << 60 | 1ull << 58);
 		bool valid;
 		if((moving >= 6) != at_move == BLACK){
 			std::cerr << "wrong atmove" << "\n";
@@ -405,13 +410,23 @@ struct Position{
 				case 2 :valid = (to_bb & attacks_bb<BISHOP>(from, occ) & ~ours);                break;
 				case 3 :valid = (to_bb & attacks_bb<ROOK>(from, occ) & ~ours);                  break;
 				case 4 :valid = (to_bb & attacks_bb(QUEEN, from, occ) & ~ours);                 break;
-				case 5 :valid = (to_bb & PseudoAttacks[KING][from] & ~ours);                    break;
+				//case 5 :valid = (to_bb & PseudoAttacks[KING][from] & ~ours);                    break;
 				case 6 :valid = (to_bb & (pawn_attacks<BLACK>(from, occ, their, spec_mem.ep)));break;
 				case 7 :valid = (to_bb & PseudoAttacks[KNIGHT][from] & ~ours);                  break;
 				case 8 :valid = (to_bb & attacks_bb<BISHOP>(from, occ) & ~ours);                break;
 				case 9 :valid = (to_bb & attacks_bb<ROOK>(from, occ) & ~ours);                  break;
 				case 10:valid = (to_bb & attacks_bb(QUEEN, from, occ) & ~ours);                 break;
-				case 11:valid = (to_bb & PseudoAttacks[KING][from] & ~ours);                    break;
+				//case 11:valid = (to_bb & PseudoAttacks[KING][from] & ~ours);                    break;
+				case 5:
+				if(std::abs(int(from) - int(to)) == 2){
+					if(from_to == wk){
+
+					}
+					else if(from_to == wq){
+
+					}
+				}
+				case 11:
 				default:valid = false;
 			}
 		if(!valid && moving == 4){
@@ -711,15 +726,15 @@ struct Position{
 			}
 		}
 	}
-	std::array<std::array<unsigned, 5>, 64> attacker_count(Color c)const{
-		/*for(PieceType pt : {KNIGHT, BISHOP, ROOK, QUEEN}){
+	/*std::array<std::array<unsigned, 5>, 64> attacker_count(Color c)const{
+		for(PieceType pt : {KNIGHT, BISHOP, ROOK, QUEEN}){
 			Piece p = make_piece(c, pt);
 			Bitboard pieces = get(p);
 			Bitloop(pieces){
 				Bitboard bb_a
 			}
-		}*/
-	}
+		}
+	}*/
 };
 extern template stackvector<turbomove, 256> Position::generate_loud<WHITE>()const;
 extern template stackvector<turbomove, 256> Position::generate_loud<BLACK>()const;

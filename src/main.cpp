@@ -57,6 +57,7 @@ int main2(){
 int main(){
 	//mlockall(MCL_FUTURE);
 	Bitboards::init();
+	std::cout << sizeof(shortmove) << "\n";
 	//print(KingTwoMoves[SQ_A1]);
 	//std::ofstream whatwasinput("/home/manuel/cengine_log.txt", std::ios::app);
 	//whatwasinput << "\n\n=========================\n\n" << std::flush;
@@ -114,6 +115,7 @@ int main(){
 		else if(command == "go"){
 			std::string token;
 			isstr >> token;
+			size_t movetime = 100; //in ms
 			if(token == "perft"){
 				int depth = 1;
 				if(isstr >> token){
@@ -121,6 +123,10 @@ int main(){
 				}
 				std::cout << perft(p, depth) << std::endl;
 				continue;
+			}
+			
+			else if(token == "movetime"){
+				isstr >> movetime;
 			}
 			int sgor;
 			uint64_t nps;
@@ -144,7 +150,7 @@ int main(){
 				}
 				if(interrupt_token)break;
 			}});
-			std::this_thread::sleep_for(std::chrono::seconds(20));
+			std::this_thread::sleep_for(std::chrono::milliseconds(movetime));
 			//std::cin.get();
 			interrupt_token = true;
 			searcher.join();
@@ -155,10 +161,10 @@ int main(){
 				if(it == tstate.map.end()){
 					break;
 				}
-				short sm = (it->second.bestmove);
-				std::cerr << square_to_string(Square(sm >> 8)) << square_to_string(Square(sm & 255)) << "\n";
-				if(!sm)break;
-				pv.push_back(complete_move(pvpos.piece_boards, Square(sm >> 8), Square(sm & 255)));
+				shortmove sm = (it->second.bestmove);
+				std::cerr << square_to_string(sm.from()) << square_to_string(sm.to()) << "\n";
+				if(sm.from() == 0 && sm.to() == 0)break;
+				pv.push_back(complete_move(pvpos.piece_boards, sm.from(), sm.to()));
 				pvpos.apply_move_checked(pv.back());
 			}
 			std::string pvstring;

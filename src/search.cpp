@@ -50,7 +50,7 @@ int negamax_serial(Position& pos, int depth, int alpha, int beta, turbo_search_s
 std::pair<int, turbomove> negamax_serial_impl(Position& pos, int depth, int alpha, int beta, turbo_search_state& state, const std::unordered_set<turbomove>& upper_killerset){
     int maxWert = alpha;
     stackvector<turbomove, 256> legal;
-    short last_cutoff_move = 0;
+    shortmove last_cutoff_move;
     int what_would_have_been = -777;
     if(depth > 0){
         auto mapit = state.map.find(pos.quickhash());
@@ -70,10 +70,10 @@ std::pair<int, turbomove> negamax_serial_impl(Position& pos, int depth, int alph
             }
             
             last_cutoff_move = mapit->second.bestmove;
-            if(false && last_cutoff_move){
+            if(false){// && last_cutoff_move){
                 auto opt = pos.create_move(last_cutoff_move);
                 if(!opt){
-                    last_cutoff_move = 0;
+                    last_cutoff_move.set_null();
                 }
                 else{
                     //std::cerr << "asdasa\n";
@@ -114,13 +114,13 @@ std::pair<int, turbomove> negamax_serial_impl(Position& pos, int depth, int alph
             return {0, turbomove{12,0,0,0,0}};
         }
     }
-    Square starting_square = Square(last_cutoff_move & 63);
-    Square  ending_square =  Square((last_cutoff_move >> 8) & 63);
+    Square starting_square = Square(last_cutoff_move.from());
+    Square  ending_square =  Square(last_cutoff_move.to());
     Bitboard cutoffcheckmask = (1ull << starting_square) | (1ull << ending_square);
     if(depth >= 3){
         
         sort_based_on(legal.begin(), legal.end(), [&](const turbomove& tm){
-            if(last_cutoff_move){
+            if(!last_cutoff_move.is_null()){
                 Bitboard matsch = tm.bb1 & cutoffcheckmask;
                 Bitboard popbit = matsch & (matsch - 1);
                 if(popbit){
@@ -152,7 +152,7 @@ std::pair<int, turbomove> negamax_serial_impl(Position& pos, int depth, int alph
     else if(depth >= 1){
         
         sort_based_on(legal.begin(), legal.end(), [&](const turbomove& tm) -> int{
-            if(last_cutoff_move){
+            if(!last_cutoff_move.is_null()){
                 Bitboard matsch = (tm.bb1 & cutoffcheckmask);
                 Bitboard popbit = (matsch & (matsch - 1)   );
                 if(popbit){

@@ -4,6 +4,7 @@
 #include "bitboard.hpp"
 #include "io.hpp"
 #include <string>
+#include <cstring>
 #include <unordered_map>
 struct Position;
 struct complete_move {
@@ -82,6 +83,31 @@ struct complete_move {
         return square_to_string(from) + square_to_string(to);
     }
 };
+struct shortmove{
+    uint8_t _from : 6;
+    bool promotion_bit : 1;
+    uint8_t _to : 6;
+    uint8_t promotion_index : 2;
+    Square from()const noexcept{
+        return (Square)_from;
+    }
+    Square to()const noexcept{
+        return (Square)_to;
+    }
+    shortmove() = default;
+    shortmove(Square from, Square to) : _from(from), promotion_bit(false), _to(to), promotion_index(0){
+
+    }
+    shortmove(Square from, Square to, uint8_t pr_index) : _from(from), promotion_bit(true), _to(to), promotion_index(pr_index){
+        assert((to / 8) == 0 || (to / 8) == 7);
+    }
+    bool is_null()const noexcept{
+        return from() == 0 && to() == 0;
+    }
+    void set_null(){
+        std::memset(this, 0, 2);
+    }
+};
 struct turbomove{
     unsigned short index1, index2;
     unsigned int flags;
@@ -120,17 +146,15 @@ struct turbomove{
         }
         return str;
     }
-    short to_shortmove()const noexcept{
-        short ret = 0;
+    shortmove to_shortmove()const noexcept{
+        
         Square from = lsb(bb1);
         Square to = lsb(bb1 & (bb1 - 1));
         if((flags >> 1) & 1)std::swap(from, to);
-        ret = int(from) << 8 | int(to);
         if(7 & (flags >> 2)){
-            ret |= (1 << 6);
-            ret |= (7 & (flags >> 2)) << 14;
+            return shortmove(from, to, 7 & (flags >> 2));
         }
-        return ret;
+        return shortmove(from, to);
     }
     bool operator==(const turbomove& other)const noexcept{
         return bb1 == other.bb1;
