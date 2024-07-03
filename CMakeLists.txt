@@ -55,10 +55,10 @@ if(PEXT)
 else()
 	message("${Red}Doesn't support pext...${ColourReset}")
 endif()
-
+if(NOT EMSCRIPTEN)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-narrowing -fopenmp -march=native")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${BMI_MACROS} -Wno-narrowing -march=native -fopenmp")
-
+endif()
 add_library(libcengine STATIC ${libcengine_src})
 add_executable(cengine "src/main.cpp")
 target_link_libraries(cengine PUBLIC libcengine)

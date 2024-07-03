@@ -639,7 +639,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 				/*if(LineBetween[single_square][our_king_square]){
 					attackline |= (1ull << single_square);
 				}*/
-				if((attackline & (their_pieces & ~_blsi_u64(es_bb))) == 0){
+				if((attackline & (their_pieces & ~blsi_(es_bb))) == 0){
 					if(popcount(attackline & our_pieces) == 1){
 						pinlines[lsb(attackline & our_pieces)] ^= ~attackline;
 						pinlines[lsb(attackline & our_pieces)] |= (1ull << single_square);
@@ -681,14 +681,14 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 			if(checkcount >= 2 && pt != KING)continue;
 			if(pt == PAWN){
 				Bitloop(our_pieces_ofthis){
-					const Bitboard our_piece_single = _blsi_u64(our_pieces_ofthis);
+					const Bitboard our_piece_single = blsi_(our_pieces_ofthis);
 					const Square our_piece_square = lsb(our_pieces_ofthis);
 					Bitboard attacks = pawn_attacks<we>(our_piece_square, occ, their_pieces, spec_mem.ep);
 					attacks &= (pinlines[our_piece_square]);
 					attacks &= (checkmask_for_pawns & (loudness_mask | their_king_backward_pseudos[pt]));
 					attacks &= ~last_rank<we>();
 					Bitloop(attacks){
-						Bitboard singleattack = _blsi_u64(attacks);
+						Bitboard singleattack = blsi_(attacks);
 						Bitboard their_piece_clearance = singleattack;
 						Piece their_klonked_piece = NO_PIECE;
 						if(their_piece_clearance & their_pieces){
@@ -711,7 +711,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 			}
 			else if(pt == BISHOP || pt == ROOK || pt == QUEEN || pt == KNIGHT){
 				Bitloop(our_pieces_ofthis){
-					const Bitboard our_piece_single = _blsi_u64(our_pieces_ofthis);
+					const Bitboard our_piece_single = blsi_(our_pieces_ofthis);
 					const Square our_piece_square = lsb(our_pieces_ofthis);
 					Bitboard attacks = attacks_bb(pt, our_piece_square, occ);
 					attacks &= ~our_pieces;
@@ -721,8 +721,8 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 						//print(attacks);
 					}
 					Bitloop(attacks){
-						Bitboard singleattack = _blsi_u64(attacks);
-						int castling_klonk = 0;
+						Bitboard singleattack = blsi_(attacks);
+						unsigned int castling_klonk = 0;
 						if constexpr(we == WHITE){
 							castling_klonk |= (Bitboard(our_piece_square == SQ_H1 ? 1 : 0) << 5);
 							castling_klonk |= (Bitboard(our_piece_square == SQ_A1 ? 1 : 0) << 6);
@@ -745,8 +745,8 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 				attacks &= ~their_pseudo;
 				attacks &= loudness_mask;
 				Bitloop(attacks){
-					Bitboard singleattack = _blsi_u64(attacks);
-					moves.push_back(turbomove{short(compress_piece(ourpiece)), short(compress_piece(piece_map[lsb(attacks)])), 0, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack});
+					Bitboard singleattack = blsi_(attacks);
+					moves.push_back(turbomove{uint16_t(compress_piece(ourpiece)), uint16_t(compress_piece(piece_map[lsb(attacks)])), 0, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack});
 					if(int(lsb(singleattack)) < int(our_king_square)){
 						moves.back().flags |= (1 << 1);
 					}
@@ -807,7 +807,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 				/*if(LineBetween[single_square][our_king_square]){
 					attackline |= (1ull << single_square);
 				}*/
-				if((attackline & (their_pieces & ~_blsi_u64(es_bb))) == 0){
+				if((attackline & (their_pieces & ~blsi_(es_bb))) == 0){
 					if(popcount(attackline & our_pieces) == 1){
 						pinlines[lsb(attackline & our_pieces)] ^= ~attackline;
 						pinlines[lsb(attackline & our_pieces)] |= (1ull << single_square);
@@ -844,14 +844,14 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 			if(checkcount >= 2 && pt != KING)continue;
 			if(pt == PAWN){
 				Bitloop(our_pieces_ofthis){
-					const Bitboard our_piece_single = _blsi_u64(our_pieces_ofthis);
+					const Bitboard our_piece_single = blsi_(our_pieces_ofthis);
 					const Square our_piece_square = lsb(our_pieces_ofthis);
 					Bitboard attacks = pawn_attacks<we>(our_piece_square, occ, their_pieces, spec_mem.ep);
 					attacks &= (pinlines[our_piece_square]);
 					attacks &= checkmask_for_pawns;
 					attacks &= ~last_rank<we>();
 					Bitloop(attacks){
-						Bitboard singleattack = _blsi_u64(attacks);
+						Bitboard singleattack = blsi_(attacks);
 						Bitboard their_piece_clearance = singleattack;
 						Piece their_klonked_piece = NO_PIECE;
 						if(their_piece_clearance & their_pieces){
@@ -874,7 +874,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 			}
 			else if(pt == BISHOP || pt == ROOK || pt == QUEEN || pt == KNIGHT){
 				Bitloop(our_pieces_ofthis){
-					const Bitboard our_piece_single = _blsi_u64(our_pieces_ofthis);
+					const Bitboard our_piece_single = blsi_(our_pieces_ofthis);
 					const Square our_piece_square = lsb(our_pieces_ofthis);
 					Bitboard attacks = attacks_bb(pt, our_piece_square, occ);
 					attacks &= ~our_pieces;
@@ -885,8 +885,8 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 						//print(attacks);
 					}
 					Bitloop(attacks){
-						Bitboard singleattack = _blsi_u64(attacks);
-						int castling_klonk = 0;
+						Bitboard singleattack = blsi_(attacks);
+						unsigned int castling_klonk = 0;
 						if constexpr(we == WHITE){
 							castling_klonk |= (Bitboard(our_piece_square == SQ_H1 ? 1 : 0) << 5);
 							castling_klonk |= (Bitboard(our_piece_square == SQ_A1 ? 1 : 0) << 6);
@@ -895,7 +895,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 							castling_klonk |= (Bitboard(our_piece_square == SQ_H8 ? 1 : 0) << 5);
 							castling_klonk |= (Bitboard(our_piece_square == SQ_A8 ? 1 : 0) << 6);
 						}
-						moves.push_back(turbomove{short(compress_piece(ourpiece)), short(compress_piece(piece_map[lsb(attacks)])), castling_klonk, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack});
+						moves.push_back(turbomove{uint16_t(compress_piece(ourpiece)), uint16_t(compress_piece(piece_map[lsb(attacks)])), castling_klonk, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack});
 						if(int(lsb(singleattack)) < int(our_piece_square)){
 							moves.back().flags |= (1 << 1);
 						}
@@ -908,8 +908,8 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 				attacks &= ~our_pieces;
 				attacks &= ~their_pseudo;
 				Bitloop(attacks){
-					Bitboard singleattack = _blsi_u64(attacks);
-					moves.push_back(turbomove{short(compress_piece(ourpiece)), short(compress_piece(piece_map[lsb(attacks)])), 0, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack});
+					Bitboard singleattack = blsi_(attacks);
+					moves.push_back(turbomove{uint16_t(compress_piece(ourpiece)), uint16_t(compress_piece(piece_map[lsb(attacks)])), 0, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack});
 					if(int(lsb(singleattack)) < int(our_king_square)){
 						moves.back().flags |= (1 << 1);
 					}
@@ -935,8 +935,8 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 				if((their_pseudo & (W_QUEENSIDE_CASTLING_NOCHECKS_REQUIRED | our_king_bitboard)) == 0){
 					moves.push_back(
 						turbomove{
-							short(compress_piece<W_KING>()),
-							short(compress_piece<W_ROOK>()),
+							uint16_t(compress_piece<W_KING>()),
+							uint16_t(compress_piece<W_ROOK>()),
 							3 | 3 << 5,
 							(1ull << 4 | 1ull << 2),
 							(1ull << 0 | 1ull << 3)
@@ -950,8 +950,8 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 				if((their_pseudo & (B_KINGSIDE_CASTLING_EMPTYNESS_REQUIRED | our_king_bitboard)) == 0){
 					moves.push_back(
 						turbomove{
-							short(compress_piece<B_KING>()),
-							short(compress_piece<B_ROOK>()),
+							uint16_t(compress_piece<B_KING>()),
+							uint16_t(compress_piece<B_ROOK>()),
 							1 | 3 << 5,
 							(1ull << 60 | 1ull << 62),
 							(1ull << 63 | 1ull << 61)
@@ -963,8 +963,8 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 				if((their_pseudo & (B_QUEENSIDE_CASTLING_NOCHECKS_REQUIRED | our_king_bitboard)) == 0){
 					moves.push_back(
 						turbomove{
-							short(compress_piece<B_KING>()),
-							short(compress_piece<B_ROOK>()),
+							uint16_t(compress_piece<B_KING>()),
+							uint16_t(compress_piece<B_ROOK>()),
 							3 | 3 << 5,
 							(1ull << 60 | 1ull << 58),
 							(1ull << 56 | 1ull << 59)
@@ -983,19 +983,19 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 		if((we == WHITE && (ourpawns & rank_bb(RANK_7))) || (we == BLACK && (ourpawns & rank_bb(RANK_2))))
 		Bitloop(ourpawns){
 			int reverse_bit = ((we == BLACK) ? 2 : 0);
-			const Bitboard our_piece_single = _blsi_u64(ourpawns);
+			const Bitboard our_piece_single = blsi_(ourpawns);
 			const Square our_piece_square = lsb(ourpawns);
 			Bitboard attacks = pawn_attacks<we>(our_piece_square, occ, their_pieces, spec_mem.ep);
 			attacks &= (pinlines[our_piece_square]);
 			attacks &= checkmask_for_normal_figures;
 			attacks &= last_rank<we>();
 			Bitloop(attacks){
-				Bitboard singleattack = _blsi_u64(attacks);
+				Bitboard singleattack = blsi_(attacks);
 				moves.push_back(
 				turbomove{
 					compress_piece(ourpawn),
 					compress_piece(piece_map[lsb(attacks)]),
-					1 << 2 | reverse_bit,
+					1u << 2 | reverse_bit,
 					our_piece_single | singleattack,
 					piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack
 				});
@@ -1003,7 +1003,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 				turbomove{
 					compress_piece(ourpawn),
 					compress_piece(piece_map[lsb(attacks)]),
-					2 << 2 | reverse_bit,
+					2u << 2 | reverse_bit,
 					our_piece_single | singleattack,
 					piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack
 				});
@@ -1011,7 +1011,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 				turbomove{
 					compress_piece(ourpawn),
 					compress_piece(piece_map[lsb(attacks)]),
-					3 << 2 | reverse_bit,
+					3u << 2 | reverse_bit,
 					our_piece_single | singleattack,
 					piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack
 				});
@@ -1019,7 +1019,7 @@ stackvector<turbomove, 256> Position::generate_loud()const{
 				turbomove{
 					compress_piece(ourpawn),
 					compress_piece(piece_map[lsb(attacks)]),
-					4 << 2 | reverse_bit,
+					4u << 2 | reverse_bit,
 					our_piece_single | singleattack,
 					piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack
 				});

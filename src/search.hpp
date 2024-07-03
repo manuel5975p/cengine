@@ -9,6 +9,18 @@
 #include <unordered_map>
 #include <algorithm>
 #include <sys/mman.h>
+template<typename T>
+T* mmaplloc(size_t n){
+    T* ret = (T*)mmap(nullptr, n * sizeof(T), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+    if(ret == MAP_FAILED){
+        ret = (T*)mmap(nullptr, n * sizeof(T), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    }
+    if(ret == MAP_FAILED){
+        std::cerr << "mmap with size " + std::to_string(n * sizeof(T)) + " bytes failed\n";
+        abort();
+    }
+    return ret;
+}
 extern bool interrupt_token;
 template<typename T>
 constexpr T empty_value(0);
@@ -22,7 +34,7 @@ struct pairmemmap{
     pairmemmap(std::size_t size) : kvs(nullptr), n_elems(0){
         m_size = size;
         assert((m_size & (m_size - 1)) == 0 && "Size must be a power of two");
-        kvs = (std::pair<K, V>*)mmap(nullptr, m_size * sizeof(std::pair<K, V>), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        kvs = mmaplloc<std::pair<K, V>>(m_size);
         clear();
     }
     struct iterator{
@@ -68,7 +80,8 @@ struct pairmemmap{
     }
     void resize(size_t newsize){
         assert((newsize & (newsize - 1)) == 0 && "Size must be a power of two");
-        std::pair<K, V>* newkvs = (std::pair<K, V>*)mmap(nullptr, newsize * sizeof(std::pair<K, V>), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+        std::pair<K, V>* newkvs = mmaplloc<std::pair<K, V>>(newsize);
+        
         for(size_t i = 0;i < newsize;i++){
             newkvs[i].first = empty_value<K>;
         }
@@ -141,7 +154,7 @@ struct turbo_search_state{
     pairmemmap<hash_int, hash_entry> map;
     turbomove bestmove;
     uint64_t count;
-    turbo_search_state() : map(1 << 28), count(0){}
+    turbo_search_state() : map(1 << 26), count(0){}
 };
 static int negamax(Position& pos, int depth, int alpha, int beta, search_state& state){
     state.count++;
@@ -175,26 +188,26 @@ static int negamax(Position& pos, int depth, int alpha, int beta, search_state& 
     if (depth <= 0){
         bool atcheck = pos.check(pos.at_move);
         if(!atcheck)
-        for(auto it = Zugliste.begin();it < Zugliste.end();){
-            state.count++;
-	    	if(it->captured_piece == NO_PIECE){ //TODO: en passant
-                Position pclone(pos);
-                bool ch = pclone.apply_move_checked(*it);
-                if(!ch)std::terminate();
-                if(!pclone.check(pclone.at_move)){
-	    		    std::swap(*it, *(Zugliste.end() - 1));
-	    		    Zugliste.pop_back();
+            for(auto it = Zugliste.begin();it < Zugliste.end();){
+                state.count++;
+	        	if(it->captured_piece == NO_PIECE){ //TODO: en passant
+                    Position pclone(pos);
+                    bool ch = pclone.apply_move_checked(*it);
+                    if(!ch)std::terminate();
+                    if(!pclone.check(pclone.at_move)){
+	        		    std::swap(*it, *(Zugliste.end() - 1));
+	        		    Zugliste.pop_back();
+                    }
+                    else{
+                        //std::cout << it->to_string() << "\n";
+                        //std::cout << pclone.to_string() << "\n\n";
+                        it++;
+                    }
+	        	}
+	        	else{
+	        		it++;
                 }
-                else{
-                    //std::cout << it->to_string() << "\n";
-                    //std::cout << pclone.to_string() << "\n\n";
-                    it++;
-                }
-	    	}
-	    	else{
-	    		it++;
-            }
-	    }
+	        }
         if(Zugliste.size() > 0){
             //if(!atcheck){
                 int stand_pat = evaluate(pos);

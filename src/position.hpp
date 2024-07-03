@@ -12,7 +12,7 @@
 #include <coroutine>
 #include <immintrin.h>
 //#include <Eigen/Dense>
-#include <xoshiro.hpp>
+#include "xoshiro.hpp"
 using hash_int = std::uint64_t;
 struct zobrist_table{
 	std::array<std::array<hash_int, 64>, 12> values;
@@ -103,7 +103,21 @@ struct zobrist_table{
             }
         };
     };
-#define Bitloop(X) for(;X; X = _blsr_u64(X))
+inline Bitboard blsr_(Bitboard b){
+	#ifndef __EMSCRIPTEN__
+		return __blsr_u64(b);
+	#else
+		return b & (b - 1);
+	#endif
+}
+inline Bitboard blsi_(Bitboard b){
+	#ifndef __EMSCRIPTEN__
+		return _blsi_(b);
+	#else
+		return b & (-b);
+	#endif
+}
+#define Bitloop(X) for(;X; X = blsr_(X))
 extern zobrist_table global_zobrist_table;
 struct special_members{
 	CastlingRight cr;
@@ -161,7 +175,7 @@ struct Position{
 			while(pib){
 				Square x = lsb(pib);
 				p[x] = pi;
-				pib = _blsr_u64(pib);
+				pib = blsr_(pib);
 			}
 		}
 	}
@@ -338,14 +352,14 @@ struct Position{
 		spec_mem.ep = SQ_NONE;
 		constexpr Bitboard pawnstarts = rank_bb(RANK_2) | rank_bb(RANK_7);
 		if((tm.bb1 & pawnstarts) && (tm.index1 == 0 || tm.index1 == 6)){
-			if(lsb(_blsr_u64(tm.bb1)) - lsb(tm.bb1) == 16){
-				spec_mem.ep = Square((lsb(_blsr_u64(tm.bb1)) + lsb(tm.bb1)) / 2);
+			if(lsb(blsr_(tm.bb1)) - lsb(tm.bb1) == 16){
+				spec_mem.ep = Square((lsb(blsr_(tm.bb1)) + lsb(tm.bb1)) / 2);
 			}
 		}
 		if(tm.flags >> 2 & 7){
 			//std::cout << "doing promotion" << std::endl;
 			//std::cout << "Square " << lsb(_blsr_u64(tm.bb1)) << std::endl;
-			Bitboard promotion_mask = ((tm.flags & 2) ? (tm.bb1 ^ _blsr_u64(tm.bb1)) : _blsr_u64(tm.bb1));
+			Bitboard promotion_mask = ((tm.flags & 2) ? (tm.bb1 ^ blsr_(tm.bb1)) : blsr_(tm.bb1));
 			int index = tm.flags >> 2 & 7;
 			int realindex = 5 - index + (at_move == BLACK ? 6 : 0);
 
@@ -374,7 +388,7 @@ struct Position{
 		if(tm.index2 < 12)
 			piece_boards[tm.index2] ^= tm.bb2;
 		if(tm.flags >> 2 & 7){
-			Bitboard promotion_mask = ((tm.flags & 2) ? (tm.bb1 ^ _blsr_u64(tm.bb1)) : _blsr_u64(tm.bb1));
+			Bitboard promotion_mask = ((tm.flags & 2) ? (tm.bb1 ^ blsr_(tm.bb1)) : blsr_(tm.bb1));
 			int index = tm.flags >> 2 & 7;
 			int realindex = 5 - index + (at_move == BLACK ? 6 : 0);
 			piece_boards[realindex] ^= promotion_mask;
@@ -503,7 +517,7 @@ struct Position{
 				/*if(LineBetween[single_square][our_king_square]){
 					attackline |= (1ull << single_square);
 				}*/
-				if((attackline & (their_pieces & ~_blsi_u64(es_bb))) == 0){
+				if((attackline & (their_pieces & ~blsi_(es_bb))) == 0){
 					if(popcount(attackline & our_pieces) == 1){
 						pinlines[lsb(attackline & our_pieces)] ^= ~attackline;
 						pinlines[lsb(attackline & our_pieces)] |= (1ull << single_square);
@@ -540,14 +554,14 @@ struct Position{
 			if(checkcount >= 2 && pt != KING)continue;
 			if(pt == PAWN){
 				Bitloop(our_pieces_ofthis){
-					const Bitboard our_piece_single = _blsi_u64(our_pieces_ofthis);
+					const Bitboard our_piece_single = blsi_(our_pieces_ofthis);
 					const Square our_piece_square = lsb(our_pieces_ofthis);
 					Bitboard attacks = pawn_attacks<we>(our_piece_square, occ, their_pieces, spec_mem.ep);
 					attacks &= (pinlines[our_piece_square]);
 					attacks &= checkmask_for_pawns;
 					attacks &= ~last_rank<we>();
 					Bitloop(attacks){
-						Bitboard singleattack = _blsi_u64(attacks);
+						Bitboard singleattack = blsi_(attacks);
 						Bitboard their_piece_clearance = singleattack;
 						Piece their_klonked_piece = NO_PIECE;
 						if(their_piece_clearance & their_pieces){
@@ -572,7 +586,7 @@ struct Position{
 			}
 			else if(pt == BISHOP || pt == ROOK || pt == QUEEN || pt == KNIGHT){
 				Bitloop(our_pieces_ofthis){
-					const Bitboard our_piece_single = _blsi_u64(our_pieces_ofthis);
+					const Bitboard our_piece_single = blsi_(our_pieces_ofthis);
 					const Square our_piece_square = lsb(our_pieces_ofthis);
 					Bitboard attacks = attacks_bb(pt, our_piece_square, occ);
 					attacks &= ~our_pieces;
@@ -583,7 +597,7 @@ struct Position{
 						//print(attacks);
 					}
 					Bitloop(attacks){
-						Bitboard singleattack = _blsi_u64(attacks);
+						Bitboard singleattack = blsi_(attacks);
 						unsigned castling_klonk = 0;
 						if constexpr(we == WHITE){
 							castling_klonk |= (Bitboard(our_piece_square == SQ_H1 ? 1 : 0) << 5);
@@ -607,7 +621,7 @@ struct Position{
 				attacks &= ~our_pieces;
 				attacks &= ~their_pseudo;
 				Bitloop(attacks){
-					Bitboard singleattack = _blsi_u64(attacks);
+					Bitboard singleattack = blsi_(attacks);
 					turbomove loc{uint16_t(compress_piece(ourpiece)), uint16_t(compress_piece(piece_map[lsb(attacks)])), 0, our_piece_single | singleattack, piece_map[lsb(attacks)] == NO_PIECE ? 0 : singleattack};
 					if(int(lsb(singleattack)) < int(our_king_square)){
 						loc.flags |= (1 << 1);
@@ -683,14 +697,14 @@ struct Position{
 		if((we == WHITE && (ourpawns & rank_bb(RANK_7))) || (we == BLACK && (ourpawns & rank_bb(RANK_2))))
 		Bitloop(ourpawns){
 			int reverse_bit = ((we == BLACK) ? 2 : 0);
-			const Bitboard our_piece_single = _blsi_u64(ourpawns);
+			const Bitboard our_piece_single = blsi_(ourpawns);
 			const Square our_piece_square = lsb(ourpawns);
 			Bitboard attacks = pawn_attacks<we>(our_piece_square, occ, their_pieces, spec_mem.ep);
 			attacks &= (pinlines[our_piece_square]);
 			attacks &= checkmask_for_normal_figures;
 			attacks &= last_rank<we>();
 			Bitloop(attacks){
-				Bitboard singleattack = _blsi_u64(attacks);
+				Bitboard singleattack = blsi_(attacks);
 				co_yield (
 				turbomove{
 					compress_piece(ourpawn),
